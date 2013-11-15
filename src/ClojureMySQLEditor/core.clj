@@ -38,11 +38,19 @@
                         :user (str (.getText user-text))
                         :password (str (.getText password-text))}))
              
-             (try (get-connection db)
+             (try 
+               (get-connection db)
                (.setText tmp-label "status: connected!")
                (println "Verbindung erfolgreich hergestellt!")
-               (catch Exception e (println "Verbindung fehlgeschlagen!"))
-               (finally (.setText tmp-label "status: disconnected!")))
+               (doto frame (.setVisible false))
+               
+               (with-connection db 
+                 (with-query-results rs ["select * from books"] 
+                   (dorun (map #(println (:title %)) rs))))
+                              
+               (catch Exception e 
+                 (println "Verbindung fehlgeschlagen!")
+                 (.setText tmp-label "status: disconnected!")))
              )))
     (doto frame
       (.setLayout (GridLayout. 7 2))
