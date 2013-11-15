@@ -1,5 +1,7 @@
 (ns ClojureMySQLEditor.core)
 
+(use 'clojure.java.jdbc)
+
 (import '(javax.swing JFrame JLabel JTextField JButton)
         '(java.awt.event ActionListener)
         '(java.awt GridLayout)
@@ -20,7 +22,7 @@
        password-label (JLabel. "password:")
        password-text (JTextField. "")
        connect-button (JButton. "Connect")
-       tmp-label (JLabel. "")]
+       tmp-label (JLabel. "status: disconnected!")]
     (.addActionListener
      connect-button
      (reify ActionListener
@@ -36,9 +38,12 @@
                         :user (str (.getText user-text))
                         :password (str (.getText password-text))}))
              
-             (with-connection db 
-               (with-query-results rs ["select * from books"] 
-                 (dorun (map #(println (:title %)) rs)))))))
+             (try (get-connection db)
+               (.setText tmp-label "status: connected!")
+               (println "Verbindung erfolgreich hergestellt!")
+               (catch Exception e (println "Verbindung fehlgeschlagen!"))
+               (finally (.setText tmp-label "status: disconnected!")))
+             )))
     (doto frame
       (.setLayout (GridLayout. 7 2))
       (.add protcol-label)
@@ -57,4 +62,5 @@
       (.add tmp-label)
       (.setSize 300 250)
       (.setVisible true))))
+
 (databaseconnect)
