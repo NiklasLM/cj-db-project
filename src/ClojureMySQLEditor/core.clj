@@ -2,18 +2,45 @@
 
 (use 'clojure.java.jdbc)
 
-(import '(javax.swing JFrame JLabel JTextField JButton)
-        '(java.awt.event ActionListener)
+(import '(javax.swing JFrame JLabel JTextField JButton JComboBox)
+        '(java.awt.event ActionListener ItemListener)
+        '(java.util Vector)
         '(java.awt GridLayout)
         '(java.awt Color)
         '(java.sql.*))
 
-(defn databasegui [db]
-  ; HIER KOMMT DER EDITOR 
-  (with-connection db
-    (with-query-results rs ["select * from books"] 
-      (dorun (map #(println (:title %)) rs))))
-  )
+; Datenbanktabellen mappen
+(defn get-database-tables [db]
+    (with-connection db
+        (into #{}
+            (map #(str (% :table_name))
+                (resultset-seq (->
+                    (connection)
+                    (.getMetaData)
+                    (.getColumns nil nil nil "%")))))))
+
+; Editor GUI
+(defn databasegui [db] 
+  (def tablenames (get-database-tables db))
+  (let [editor (JFrame. "Editor")
+        choose-label (JLabel. "choose table:")
+        choose-combo (JComboBox. (Vector. tablenames))]
+    (.addActionListener
+     choose-combo
+    (reify ActionListener
+            (actionPerformed
+             [_ evt]
+             (println (str "selection changed to " (.getSelectedItem choose-combo)))
+             (with-connection db
+               (with-query-results rs [(str "select * from " (.getSelectedItem choose-combo))] 
+                 (dorun (map #(println (:title %)) rs)))))))
+    (doto editor
+      (.setLayout (GridLayout. 1 2))
+      (.add choose-label)
+      (.add choose-combo)
+      (.setSize 250 57)
+      (.setVisible true)))
+)
 
 (defn databaseconnect []
   ; CONNECTION HANDLING
