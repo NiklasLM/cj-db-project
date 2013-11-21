@@ -2,11 +2,10 @@
 
 (use 'clojure.java.jdbc)
 
-(import '(javax.swing JFrame JLabel JTextField JButton JComboBox)
+(import '(javax.swing JFrame JLabel JTextField JButton JComboBox JTable JPanel JScrollPane)
         '(java.awt.event ActionListener ItemListener)
         '(java.util Vector)
-        '(java.awt GridLayout)
-        '(java.awt Color)
+        '(java.awt GridLayout Color GridBagLayout BorderLayout ComponentOrientation Dimension)
         '(java.sql.*))
 
 ; Datenbanktabellen mappen
@@ -14,37 +13,68 @@
     (with-connection db
         (into #{}
             (map #(str (% :table_name))
-                (resultset-seq (->
+                (result-set-seq (->
                     (connection)
                     (.getMetaData)
                     (.getColumns nil nil nil "%")))))))
 
 ; Editor GUI
-(defn databasegui [db]
+(defn editor-frame [db]
   (def tablenames (get-database-tables db))
-  (let [editor (JFrame. "Editor")
-        choose-label (JLabel. "choose table:")
-        choose-combo (JComboBox. (Vector. tablenames))]
-    (.addActionListener
-     choose-combo
-    (reify ActionListener
-            (actionPerformed
-             [_ evt]
-             (println (str "selection changed to " (.getSelectedItem choose-combo)))
-             (with-connection db
-               (with-query-results rs [(str "select * from " (.getSelectedItem choose-combo))]
-                 (dorun (map #(println (:title %)) rs)))))))
-    (doto editor
-      (.setLayout (GridLayout. 1 2))
-      (.add choose-label)
-      (.add choose-combo)
-      (.setSize 250 57)
-      (.setVisible true)))
-)
+
+   (def columns ["Book" "Author"])
+  (def data [["On Lisp" "Paul Graham"]
+           ["Practical Common Lisp" "Peter Seibel"]
+           ["Programming Clojure" "Stuart Holloway"]])
+  
+  (let [
+        frame (JFrame. "Database Table Editor")
+        pane (.getContentPane frame) ]
+    (let [
+          top-panel (let [choose-frame (JPanel.)
+                          choose-label (JLabel. "choose table:")
+                          choose-combo (JComboBox. (Vector. tablenames))]
+                      (.addActionListener
+                        choose-combo
+                        (reify ActionListener
+                          (actionPerformed
+                            [_ evt]
+                            (println (str "selection changed to " (.getSelectedItem choose-combo)))
+                            (with-connection db
+                              (with-query-results rs [(str "select * from " (.getSelectedItem choose-combo))]
+                                (dorun (map #(println (:title %)) rs)))))))
+                      (doto choose-frame
+                        (.add choose-label)
+                        (.add choose-combo)))
+          
+          center-panel (JScrollPane. 
+                         (JTable. (to-array-2d data)  (into-array columns)))
+          
+          footer-panel (let [button-frame (JPanel.)
+                          table-label (JLabel. "table options:")
+                          export-button (JButton. "export")
+                          entry-label (JLabel. "entry options:")
+                          delete-button (JButton. "delete")
+                          insert-button (JButton. "new")
+                          ]
+                         (doto button-frame
+                           (.add table-label)
+                           (.add export-button)
+                           (.add entry-label)
+                           (.add delete-button)
+                           (.add insert-button)))]
+    (do
+      (.setComponentOrientation pane ComponentOrientation/RIGHT_TO_LEFT)
+        (doto pane
+          (.add top-panel BorderLayout/PAGE_START)
+          (.add center-panel BorderLayout/CENTER)
+          (.add footer-panel BorderLayout/PAGE_END))))
+    (.pack frame)
+    (.setVisible frame true)))
 
 (defn databaseconnect []
   ; CONNECTION HANDLING
-  (let [frame (JFrame. "Database Login")
+  (let [login-frame (JFrame. "Database Login")
        protcol-label (JLabel. "protocol:")
        protcol-text (JTextField. "mysql")
        server-label (JLabel. "server:")
@@ -78,15 +108,15 @@
                (.setForeground tmp-label (. Color green))
                (.setText tmp-label "status: connected!")
                (println "Verbindung erfolgreich hergestellt!")
-               (doto frame (.setVisible false))
-               (databasegui db)
+               (doto login-frame (.setVisible false))
+               (editor-frame db)
 
                (catch Exception e
                  (println "Verbindung fehlgeschlagen!")
                  (.setForeground tmp-label (. Color red))
                  (.setText tmp-label "status: disconnected!"))))))
 
-    (doto frame
+    (doto login-frame
       (.setLayout (GridLayout. 7 2))
       (.add protcol-label)
       (.add protcol-text)
@@ -106,3 +136,4 @@
       (.setVisible true))))
 
 (databaseconnect)
+
