@@ -1,12 +1,13 @@
 (ns ClojureMySQLEditor.core)
-
 (use 'clojure.java.jdbc)
-
-(import '(javax.swing JFrame JLabel JTextField JButton JComboBox JTable JPanel JScrollPane)
-        '(java.awt.event ActionListener ItemListener)
-        '(java.util Vector)
-        '(java.awt GridLayout Color GridBagLayout BorderLayout ComponentOrientation Dimension)
-        '(java.sql.*))
+(import 
+  '(javax.swing JFrame JLabel JTextField JButton JComboBox JTable JPanel JScrollPane)
+  '(javax.swing.table DefaultTableModel TableCellRenderer)
+  '(java.awt.event ActionListener ItemListener)
+  '(java.util Vector)
+  '(java.awt GridLayout Color GridBagLayout BorderLayout ComponentOrientation Dimension)
+  '(java.sql.*)
+  )
 
 ; Datenbanktabellen
 (defn get-database-tables [db]
@@ -20,21 +21,28 @@
 
 ; Datenbanktabellen Spalten
 (defn get-table-columns [db, table]
-  )
+  (with-connection db
+  (transaction
+   (with-query-results rs [(str "select * from " table)]
+     (doseq [row rs]
+       (def rowstack [])
+       (doseq [value row]
+         (def rowstack (keys row)))))))
+  (into-array rowstack))
 
 ; Datenbanktabellen Daten
 (defn get-table-data [db, table]
-  
-  (def data [])
   (with-connection db
   (transaction
-   (with-query-results rs [(str "select * from " table)] 
-     ; rs will be a sequence of maps, 
-     ; one for each record in the result set. 
+   (with-query-results rs [(str "select * from " table)]
+     (def rsstack [])
      (doseq [row rs]
+       (def rowstack [])
        (doseq [value row]
-         (concat rowdata (str (val value)))))))))
-
+         (def rowstack (conj rowstack (str "\"" (val value) "\""))))
+       (def rsstack (conj rsstack rowstack)))
+     
+     (to-array-2d rsstack)))))
 
 ; Editor GUI
 (defn editor-frame [db]
@@ -59,7 +67,12 @@
                             [_ evt]
                             (def columndata (get-table-columns db (.getSelectedItem choose-combo)))
                             (def tabledata (get-table-data db (.getSelectedItem choose-combo)))
-                      )))
+                            
+                            (def tablemodel (proxy [DefaultTableModel] [tabledata columndata]))
+                            
+                            ;Updating JTable here!
+
+                            )))
                              
                       (doto choose-frame
                         (.add choose-label)
@@ -154,4 +167,3 @@
       (.setVisible true))))
 
 (databaseconnect)
-
