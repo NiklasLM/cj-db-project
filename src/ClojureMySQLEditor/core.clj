@@ -8,7 +8,7 @@
         '(java.awt GridLayout Color GridBagLayout BorderLayout ComponentOrientation Dimension)
         '(java.sql.*))
 
-; Datenbanktabellen mappen
+; Datenbanktabellen
 (defn get-database-tables [db]
     (with-connection db
         (into #{}
@@ -18,11 +18,29 @@
                     (.getMetaData)
                     (.getColumns nil nil nil "%")))))))
 
+; Datenbanktabellen Spalten
+(defn get-table-columns [db, table]
+  )
+
+; Datenbanktabellen Daten
+(defn get-table-data [db, table]
+  
+  (def data [])
+  (with-connection db
+  (transaction
+   (with-query-results rs [(str "select * from " table)] 
+     ; rs will be a sequence of maps, 
+     ; one for each record in the result set. 
+     (doseq [row rs]
+       (doseq [value row]
+         (concat rowdata (str (val value)))))))))
+
+
 ; Editor GUI
 (defn editor-frame [db]
   (def tablenames (get-database-tables db))
 
-   (def columns ["Book" "Author"])
+  (def columns ["Book" "Author"])
   (def data [["On Lisp" "Paul Graham"]
            ["Practical Common Lisp" "Peter Seibel"]
            ["Programming Clojure" "Stuart Holloway"]])
@@ -39,10 +57,10 @@
                         (reify ActionListener
                           (actionPerformed
                             [_ evt]
-                            (println (str "selection changed to " (.getSelectedItem choose-combo)))
-                            (with-connection db
-                              (with-query-results rs [(str "select * from " (.getSelectedItem choose-combo))]
-                                (dorun (map #(println (:title %)) rs)))))))
+                            (def columndata (get-table-columns db (.getSelectedItem choose-combo)))
+                            (def tabledata (get-table-data db (.getSelectedItem choose-combo)))
+                      )))
+                             
                       (doto choose-frame
                         (.add choose-label)
                         (.add choose-combo)))
