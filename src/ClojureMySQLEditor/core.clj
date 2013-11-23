@@ -4,6 +4,7 @@
 (import 
   '(javax.swing JFrame JLabel JTextField JButton JComboBox JTable JPanel JScrollPane)
   '(javax.swing.table DefaultTableModel TableCellRenderer)
+  '(javax.swing.event TableModelListener)
   '(java.awt.event ActionListener ItemListener)
   '(java.util Vector)
   '(java.awt GridLayout Color GridBagLayout BorderLayout ComponentOrientation Dimension)
@@ -11,7 +12,7 @@
   )
 
 ; DEFS
-(def columns ["Tabelle"])
+(def columns ["table"])
 (def data [["please select an table in dropdown"]])
 
 (def table (JTable. ))
@@ -49,18 +50,15 @@
        (doseq [value row]
          (def rowstack (conj rowstack (str (val value)))))
        (def rsstack (conj rsstack rowstack)))
-     
      (to-array-2d rsstack)))))
 
 ; Editor GUI
 (defn editor-frame [db]
   (def tablenames (get-database-tables db))
  
-  (let [
-        frame (JFrame. "Database Table Editor")
+  (let [frame (JFrame. "Database Table Editor")
         pane (.getContentPane frame) ]
-    (let [
-          top-panel (let [choose-frame (JPanel.)
+    (let [top-panel (let [choose-frame (JPanel.)
                           choose-label (JLabel. "choose table:")
                           choose-combo (JComboBox. (Vector. tablenames))]
                       (.addActionListener
@@ -70,8 +68,6 @@
                             [_ evt]
                             (def columndata (get-table-columns db (.getSelectedItem choose-combo)))
                             (def tabledata (get-table-data db (.getSelectedItem choose-combo)))                          
-                            
-                            ;Updating JTable here!
                             (def model (proxy [DefaultTableModel]  [tabledata columndata]))
                             (.setModel table model)
                             )))
@@ -95,10 +91,16 @@
                            (.add export-button)
                            (.add entry-label)
                            (.add delete-button)
-                           (.add insert-button)))]
+                           (.add insert-button)))
+          
+          ;ToDo: Fix tableListener
+          tListener   (proxy [TableModelListener] []
+            (tableChanged [event]
+              (println "Table Update!")))]
     (do
       (.setComponentOrientation pane ComponentOrientation/RIGHT_TO_LEFT)
       (.setModel table model)
+      (.addTableModelListener model tListener)
         (doto pane
           (.add top-panel BorderLayout/PAGE_START)
           (.add table-panel BorderLayout/CENTER)
@@ -137,19 +139,18 @@
                         :subname (str "//"(.getText server-text)":"(.getText port-text)"/"(.getText database-text))
                         :user (str (.getText user-text))
                         :password (str (.getText password-text))}))
-;             (try
+             (try
                (get-connection db)
                (.setForeground tmp-label (. Color green))
                (.setText tmp-label "status: connected!")
                (println "Verbindung erfolgreich hergestellt!")
                (doto login-frame (.setVisible false))
                (editor-frame db)
-;
-;               (catch Exception e
-;                 (println "Verbindung fehlgeschlagen!")
-;                 (.setForeground tmp-label (. Color red))
-;                 (.setText tmp-label "status: disconnected!")))
-             )))
+
+               (catch Exception e
+                 (println "Verbindung fehlgeschlagen!")
+                 (.setForeground tmp-label (. Color red))
+                 (.setText tmp-label "status: disconnected!"))))))
 
     (doto login-frame
       (.setLayout (GridLayout. 7 2))
