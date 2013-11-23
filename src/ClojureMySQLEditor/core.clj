@@ -68,8 +68,7 @@
              ; EVENT SAVE
              ; ToDo: INSERT in DB
              (doto newframe
-               (.setVisible false))
-             )))
+               (.setVisible false)))))
     
     (.addActionListener
      cancel-button
@@ -87,9 +86,7 @@
     (.add save-button)
     (.add cancel-button)
     (.setVisible true)
-    (.pack)
-    ))
-  )
+    (.pack))))
 
 ; Editor GUI
 (defn editor-frame [db]
@@ -109,8 +106,7 @@
                             (def columndata (get-table-columns db (.getSelectedItem choose-combo)))
                             (def tabledata (get-table-data db (.getSelectedItem choose-combo)))                          
                             (def model (proxy [DefaultTableModel]  [tabledata columndata]))
-                            (.setModel table model)
-                            )))
+                            (.setModel table model))))
                              
                       (doto choose-frame
                         (.add choose-label)
@@ -157,8 +153,8 @@
           
           ;ToDo: Fix tableListener
           tListener   (proxy [TableModelListener] []
-            (tableChanged [event]
-              (println "Table Update!")))]
+                        (tableChanged [event]
+                          (println "Table Update!")))]
     (do
       (.setComponentOrientation pane ComponentOrientation/RIGHT_TO_LEFT)
       (.setModel table model)
@@ -230,7 +226,7 @@
       (.add password-text)
       (.add connect-button)
       (.add tmp-label)
-      (.setSize 300 250)
+      (.pack)
       (.setVisible true))))
 
 (databaseconnect)
