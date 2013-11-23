@@ -15,12 +15,11 @@
 */
 
 /* Tabelle loeschen
-*/
 drop table Books cascade;
 drop table Customers cascade;
 drop table Orders cascade;
 drop table Orderitems cascade;
-
+*/
 
 /* Tabellen neu erzeugen */
 create table Books
