@@ -8,13 +8,12 @@
   '(java.awt.event ActionListener ItemListener)
   '(java.util Vector)
   '(java.awt GridLayout Color GridBagLayout BorderLayout ComponentOrientation Dimension)
-  '(java.sql.*)
-  )
+  '(java.sql.*))
 
 ; DEFS
 (def columns ["table"])
 (def data [["please select an table in dropdown"]])
-
+(def selectedtable "")
 (def table (JTable. ))
 (def model (proxy [DefaultTableModel]  [(to-array-2d data) (into-array columns)]))
 
@@ -34,9 +33,9 @@
     (def rowstack (into #{}
         (map #(str (% :column_name))
              (resultset-seq (->
-                              (connection)
-                              (.getMetaData)
-                              (.getColumns nil nil table "%")))))))
+                   (connection)
+                   (.getMetaData)
+                   (.getColumns nil nil table "%")))))))
   (into-array rowstack))
 
 ; Datenbanktabellen Daten
@@ -52,6 +51,46 @@
        (def rsstack (conj rsstack rowstack)))
      (to-array-2d rsstack)))))
 
+; New Entry GUI
+(defn new-frame [db]
+  (def newcolumns (get-table-columns db selectedtable))
+  (def sizecolumns (count newcolumns))
+  (let [newframe (JFrame. "New Entry")
+        newcolumn-label (JLabel. "column:")
+        newdata-label (JLabel. "data:")
+        save-button (JButton. "Save")
+        cancel-button (JButton. "Cancel")]
+    (.addActionListener
+     save-button
+     (reify ActionListener
+            (actionPerformed
+             [_ evt]
+             ; EVENT SAVE
+             ; ToDo: INSERT in DB
+             (doto newframe
+               (.setVisible false))
+             )))
+    
+    (.addActionListener
+     cancel-button
+     (reify ActionListener
+            (actionPerformed
+             [_ evt]
+             ; EVENT CANCEL
+             (doto newframe
+               (.setVisible false)))))
+  
+  (doto newframe
+    (.setLayout (GridLayout. 2 2))
+    (.add newcolumn-label)
+    (.add newdata-label)
+    (.add save-button)
+    (.add cancel-button)
+    (.setVisible true)
+    (.pack)
+    ))
+  )
+
 ; Editor GUI
 (defn editor-frame [db]
   (def tablenames (get-database-tables db))
@@ -66,6 +105,7 @@
                         (reify ActionListener
                           (actionPerformed
                             [_ evt]
+                            (def selectedtable (.getSelectedItem choose-combo))
                             (def columndata (get-table-columns db (.getSelectedItem choose-combo)))
                             (def tabledata (get-table-data db (.getSelectedItem choose-combo)))                          
                             (def model (proxy [DefaultTableModel]  [tabledata columndata]))
@@ -78,20 +118,42 @@
           
           table-panel (JScrollPane. table)   
 
-          footer-panel (let [
-                button-frame (JPanel.)
-                          table-label (JLabel. "table options:")
-                          export-button (JButton. "export")
-                          entry-label (JLabel. "entry options:")
-                          delete-button (JButton. "delete")
-                          insert-button (JButton. "new")
-                          ]
-                         (doto button-frame
-                           (.add table-label)
-                           (.add export-button)
-                           (.add entry-label)
-                           (.add delete-button)
-                           (.add insert-button)))
+          footer-panel (let [button-frame (JPanel.)
+                             table-label (JLabel. "table options:")
+                             export-button (JButton. "export")
+                             entry-label (JLabel. "entry options:")
+                             delete-button (JButton. "delete")
+                             insert-button (JButton. "new")]
+                         
+                         (.addActionListener
+                           insert-button
+                           (reify ActionListener
+                             (actionPerformed
+                               [_ evt]
+                               ; EVENT NEW
+                               (new-frame db)
+                               )))
+                         (.addActionListener
+                           delete-button
+                           (reify ActionListener
+                             (actionPerformed
+                               [_ evt]
+                               ; EVENT DELETE
+                               )))
+                         (.addActionListener
+                           export-button
+                           (reify ActionListener
+                             (actionPerformed
+                               [_ evt]
+                               ; EVENT EXPORT
+                               )))
+                         
+                           (doto button-frame
+                             (.add table-label)
+                             (.add export-button)
+                             (.add entry-label)
+                             (.add delete-button)
+                             (.add insert-button)))
           
           ;ToDo: Fix tableListener
           tListener   (proxy [TableModelListener] []
