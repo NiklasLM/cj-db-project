@@ -1,5 +1,6 @@
-(ns ClojureMySQLEditor.core)
-(use 'clojure.java.jdbc)
+(ns ClojureMySQLEditor.core
+  (:use clojure.java.jdbc))
+
 (import 
   '(javax.swing JFrame JLabel JTextField JButton JComboBox JTable JPanel JScrollPane)
   '(javax.swing.table DefaultTableModel TableCellRenderer)
@@ -8,6 +9,13 @@
   '(java.awt GridLayout Color GridBagLayout BorderLayout ComponentOrientation Dimension)
   '(java.sql.*)
   )
+
+; DEFS
+(def columns ["Tabelle"])
+(def data [["please select an table in dropdown"]])
+
+(def table (JTable. ))
+(def model (proxy [DefaultTableModel]  [(to-array-2d data) (into-array columns)]))
 
 ; Datenbanktabellen
 (defn get-database-tables [db]
@@ -22,12 +30,12 @@
 ; Datenbanktabellen Spalten
 (defn get-table-columns [db, table]
   (with-connection db
-  (transaction
-   (with-query-results rs [(str "select * from " table)]
-     (doseq [row rs]
-       (def rowstack [])
-       (doseq [value row]
-         (def rowstack (keys row)))))))
+    (def rowstack (into #{}
+        (map #(str (% :column_name))
+             (resultset-seq (->
+                              (connection)
+                              (.getMetaData)
+                              (.getColumns nil nil table "%")))))))
   (into-array rowstack))
 
 ; Datenbanktabellen Daten
@@ -39,7 +47,7 @@
      (doseq [row rs]
        (def rowstack [])
        (doseq [value row]
-         (def rowstack (conj rowstack (str "\"" (val value) "\""))))
+         (def rowstack (conj rowstack (str (val value)))))
        (def rsstack (conj rsstack rowstack)))
      
      (to-array-2d rsstack)))))
@@ -47,12 +55,7 @@
 ; Editor GUI
 (defn editor-frame [db]
   (def tablenames (get-database-tables db))
-
-  (def columns ["Book" "Author"])
-  (def data [["On Lisp" "Paul Graham"]
-           ["Practical Common Lisp" "Peter Seibel"]
-           ["Programming Clojure" "Stuart Holloway"]])
-  
+ 
   (let [
         frame (JFrame. "Database Table Editor")
         pane (.getContentPane frame) ]
@@ -66,22 +69,21 @@
                           (actionPerformed
                             [_ evt]
                             (def columndata (get-table-columns db (.getSelectedItem choose-combo)))
-                            (def tabledata (get-table-data db (.getSelectedItem choose-combo)))
-                            
-                            (def tablemodel (proxy [DefaultTableModel] [tabledata columndata]))
+                            (def tabledata (get-table-data db (.getSelectedItem choose-combo)))                          
                             
                             ;Updating JTable here!
-
+                            (def model (proxy [DefaultTableModel]  [tabledata columndata]))
+                            (.setModel table model)
                             )))
                              
                       (doto choose-frame
                         (.add choose-label)
                         (.add choose-combo)))
           
-          center-panel (JScrollPane. 
-                         (JTable. (to-array-2d data)  (into-array columns)))
-          
-          footer-panel (let [button-frame (JPanel.)
+          table-panel (JScrollPane. table)   
+
+          footer-panel (let [
+                button-frame (JPanel.)
                           table-label (JLabel. "table options:")
                           export-button (JButton. "export")
                           entry-label (JLabel. "entry options:")
@@ -96,9 +98,10 @@
                            (.add insert-button)))]
     (do
       (.setComponentOrientation pane ComponentOrientation/RIGHT_TO_LEFT)
+      (.setModel table model)
         (doto pane
           (.add top-panel BorderLayout/PAGE_START)
-          (.add center-panel BorderLayout/CENTER)
+          (.add table-panel BorderLayout/CENTER)
           (.add footer-panel BorderLayout/PAGE_END))))
     (.pack frame)
     (.setVisible frame true)))
@@ -134,18 +137,19 @@
                         :subname (str "//"(.getText server-text)":"(.getText port-text)"/"(.getText database-text))
                         :user (str (.getText user-text))
                         :password (str (.getText password-text))}))
-             (try
+;             (try
                (get-connection db)
                (.setForeground tmp-label (. Color green))
                (.setText tmp-label "status: connected!")
                (println "Verbindung erfolgreich hergestellt!")
                (doto login-frame (.setVisible false))
                (editor-frame db)
-
-               (catch Exception e
-                 (println "Verbindung fehlgeschlagen!")
-                 (.setForeground tmp-label (. Color red))
-                 (.setText tmp-label "status: disconnected!"))))))
+;
+;               (catch Exception e
+;                 (println "Verbindung fehlgeschlagen!")
+;                 (.setForeground tmp-label (. Color red))
+;                 (.setText tmp-label "status: disconnected!")))
+             )))
 
     (doto login-frame
       (.setLayout (GridLayout. 7 2))
