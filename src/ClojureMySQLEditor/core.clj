@@ -16,6 +16,7 @@
 (def selectedtable "")
 (def table (JTable. ))
 (def model (proxy [DefaultTableModel]  [(to-array-2d data) (into-array columns)]))
+(def newframe (JFrame. "New Entry"))
 
 ; Datenbanktabellen
 (defn get-database-tables [db]
@@ -51,12 +52,26 @@
        (def rsstack (conj rsstack rowstack)))
      (to-array-2d rsstack)))))
 
+; CMD GUI
+(defn cmd-frame [db]
+  (let [cmdframe (JFrame. "Command:")
+        cmdlabel (JLabel. "SQL Command:")
+        cmdtext (JTextField.)
+        cmdexecute (JButton. "execute")]
+    
+    (doto cmdframe
+	   (.setLayout (GridLayout. 3 1))
+	   (.add cmdlabel)
+     (.add cmdtext)
+     (.add cmdexecute)
+	   (.setVisible true)
+	   (.pack))))
+
 ; New Entry GUI
 (defn new-frame [db]
   (def newcolumns (get-table-columns db selectedtable))
   (def sizecolumns (count newcolumns))
-  (let [newframe (JFrame. "New Entry")
-        newcolumn-label (JLabel. "column:")
+  (let [newcolumn-label (JLabel. "column:")
         newdata-label (JLabel. "data:")
         save-button (JButton. "Save")
         cancel-button (JButton. "Cancel")]
@@ -78,7 +93,7 @@
              ; EVENT CANCEL
              (doto newframe
                (.setVisible false)))))
-  
+     
   (doto newframe
     (.setLayout (GridLayout. 2 2))
     (.add newcolumn-label)
@@ -117,6 +132,7 @@
           footer-panel (let [button-frame (JPanel.)
                              table-label (JLabel. "table options:")
                              export-button (JButton. "export")
+                             cmd-button (JButton. "cmd")
                              entry-label (JLabel. "entry options:")
                              delete-button (JButton. "delete")
                              insert-button (JButton. "new")]
@@ -143,10 +159,19 @@
                                [_ evt]
                                ; EVENT EXPORT
                                )))
+                          (.addActionListener
+                           cmd-button
+                           (reify ActionListener
+                             (actionPerformed
+                               [_ evt]
+                                ; EVENT CMD
+                                (cmd-frame db)
+                               )))
                          
                            (doto button-frame
                              (.add table-label)
                              (.add export-button)
+                             (.add cmd-button)
                              (.add entry-label)
                              (.add delete-button)
                              (.add insert-button)))
