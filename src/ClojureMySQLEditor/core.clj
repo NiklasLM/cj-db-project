@@ -36,21 +36,21 @@
              (resultset-seq (->
                    (connection)
                    (.getMetaData)
-                   (.getColumns nil nil table "%")))))))
-  (into-array rowstack))
+                   (.getColumns nil nil table nil)))))))
+  (into-array (reverse rowstack)))
 
 ; Datenbanktabellen Daten
 (defn get-table-data [db, table]
+  (def cols (clojure.string/join (interpose ", " (get-table-columns db table))))
   (with-connection db
-  (transaction
-   (with-query-results rs [(str "select * from " table)]
+   (with-query-results rs [(str "select " cols " from " table)]
      (def rsstack [])
      (doseq [row rs]
        (def rowstack [])
        (doseq [value row]
          (def rowstack (conj rowstack (str (val value)))))
-       (def rsstack (conj rsstack rowstack)))
-     (to-array-2d rsstack)))))
+       (def rsstack (conj rsstack (reverse rowstack))))
+     (to-array-2d rsstack))))
 
 ; CMD GUI
 (defn cmd-frame [db]
