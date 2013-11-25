@@ -16,7 +16,6 @@
 (def selectedtable "")
 (def table (JTable. ))
 (def model (proxy [DefaultTableModel]  [(to-array-2d data) (into-array columns)]))
-(def newframe (JFrame. "New Entry"))
 
 ; Datenbanktabellen
 (defn get-database-tables [db]
@@ -71,7 +70,9 @@
 (defn new-frame [db]
   (def newcolumns (get-table-columns db selectedtable))
   (def sizecolumns (count newcolumns))
-  (let [newcolumn-label (JLabel. "column:")
+  
+  (let [newframe (JFrame. "New Entry")
+        newcolumn-label (JLabel. "column:")
         newdata-label (JLabel. "data:")
         save-button (JButton. "Save")
         cancel-button (JButton. "Cancel")]
@@ -83,7 +84,8 @@
              ; EVENT SAVE
              ; ToDo: INSERT in DB
              (doto newframe
-               (.setVisible false)))))
+               (.setVisible false)
+               ))))
     
     (.addActionListener
      cancel-button
@@ -92,7 +94,8 @@
              [_ evt]
              ; EVENT CANCEL
              (doto newframe
-               (.setVisible false)))))
+               (.setVisible false)
+               (.dispose)))))
      
   (doto newframe
     (.setLayout (GridLayout. 2 2))
