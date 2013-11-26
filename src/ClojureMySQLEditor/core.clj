@@ -1,7 +1,7 @@
 (ns ClojureMySQLEditor.core
   (:use clojure.java.jdbc))
 
-(import 
+(import
   '(javax.swing JFrame JLabel JTextField JButton JComboBox JTable JPanel JScrollPane)
   '(javax.swing.table DefaultTableModel TableCellRenderer)
   '(javax.swing.event TableModelListener)
@@ -57,7 +57,7 @@
         cmdlabel (JLabel. "SQL Command:")
         cmdtext (JTextField.)
         cmdexecute (JButton. "execute")]
-    
+
     (doto cmdframe
 	   (.setLayout (GridLayout. 3 1))
 	   (.add cmdlabel)
@@ -68,48 +68,55 @@
 
 ; New Entry GUI
 (defn new-frame [db]
-  (def newcolumns (get-table-columns db selectedtable))
-  (def sizecolumns (count newcolumns))
-  
-  (let [newframe (JFrame. "New Entry")
-        newcolumn-label (JLabel. "column:")
-        newdata-label (JLabel. "data:")
-        save-button (JButton. "Save")
-        cancel-button (JButton. "Cancel")]
-    (.addActionListener
-     save-button
-     (reify ActionListener
-            (actionPerformed
-             [_ evt]
-             ; EVENT SAVE
-             ; ToDo: INSERT in DB
-             (doto newframe
-               (.setVisible false)
-               ))))
-    
-    (.addActionListener
-     cancel-button
-     (reify ActionListener
-            (actionPerformed
-             [_ evt]
-             ; EVENT CANCEL
-             (doto newframe
-               (.setVisible false)
-               (.dispose)))))
-     
-  (doto newframe
-    (.setLayout (GridLayout. 2 2))
-    (.add newcolumn-label)
-    (.add newdata-label)
-    (.add save-button)
-    (.add cancel-button)
-    (.setVisible true)
-    (.pack))))
+  (def newcols (get-table-columns db selectedtable))
+  (def sizecols (count newcolumns))
+
+  (def newdata (to-array-2d [["","","","","",""]]))
+
+  (let [newframe (JFrame. "Database New Entry")
+        newpane (.getContentPane newframe) ]
+    (let [top-newpanel (JLabel. "New data entry:")
+          newtable (JTable. newdata  newcols)
+          table-newentry (JScrollPane. newtable)
+          footer-newpanel (let [button-newframe (JPanel.)
+                                save-button (JButton. "save")
+                                cancel-button (JButton. "cancel")]
+
+                         (.addActionListener
+                           save-button
+                           (reify ActionListener
+                             (actionPerformed
+                               [_ evt]
+                               ; EVENT SAVE
+                               (.setVisible newframe false)
+                               )))
+                         (.addActionListener
+                           cancel-button
+                           (reify ActionListener
+                             (actionPerformed
+                               [_ evt]
+                               ; EVENT CANCEL
+                               (.setVisible newframe false)
+                                  )))
+
+                           (doto button-newframe
+                             (.add save-button)
+                             (.add cancel-button)))]
+    (do
+      (.setComponentOrientation newpane ComponentOrientation/RIGHT_TO_LEFT)
+        (doto newpane
+          (.add top-newpanel BorderLayout/PAGE_START)
+          (.add table-newentry BorderLayout/CENTER)
+          (.add footer-newpanel BorderLayout/PAGE_END)
+          )))
+    (.pack newframe)
+    (.revalidate newframe)
+    (.setVisible newframe true)))
 
 ; Editor GUI
 (defn editor-frame [db]
   (def tablenames (get-database-tables db))
- 
+
   (let [frame (JFrame. "Database Table Editor")
         pane (.getContentPane frame) ]
     (let [top-panel (let [choose-frame (JPanel.)
@@ -122,15 +129,15 @@
                             [_ evt]
                             (def selectedtable (.getSelectedItem choose-combo))
                             (def columndata (get-table-columns db (.getSelectedItem choose-combo)))
-                            (def tabledata (get-table-data db (.getSelectedItem choose-combo)))                          
+                            (def tabledata (get-table-data db (.getSelectedItem choose-combo)))
                             (def model (proxy [DefaultTableModel]  [tabledata columndata]))
                             (.setModel table model))))
-                             
+
                       (doto choose-frame
                         (.add choose-label)
                         (.add choose-combo)))
-          
-          table-panel (JScrollPane. table)   
+
+          table-panel (JScrollPane. table)
 
           footer-panel (let [button-frame (JPanel.)
                              table-label (JLabel. "table options:")
@@ -139,7 +146,7 @@
                              entry-label (JLabel. "entry options:")
                              delete-button (JButton. "delete")
                              insert-button (JButton. "new")]
-                         
+
                          (.addActionListener
                            insert-button
                            (reify ActionListener
@@ -170,7 +177,7 @@
                                 ; EVENT CMD
                                 (cmd-frame db)
                                )))
-                         
+
                            (doto button-frame
                              (.add table-label)
                              (.add export-button)
@@ -178,7 +185,7 @@
                              (.add entry-label)
                              (.add delete-button)
                              (.add insert-button)))
-          
+
           ;ToDo: Fix tableListener
           tListener   (proxy [TableModelListener] []
                         (tableChanged [event]
