@@ -69,7 +69,7 @@
 ; New Entry GUI
 (defn new-frame [db]
   (def newcols (get-table-columns db selectedtable))
-  (def sizecols (count newcolumns))
+  (def sizecols (count newcols))
 
   (def newdata (to-array-2d [["","","","","",""]]))
 
