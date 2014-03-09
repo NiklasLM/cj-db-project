@@ -2,7 +2,7 @@
   (:use clojure.java.jdbc))
 
 (import
-  '(javax.swing JFrame JLabel JTextField JButton JComboBox JTable JPanel JScrollPane)
+  '(javax.swing JFrame JLabel JTextField JPasswordField JButton JComboBox JTable JPanel JScrollPane)
   '(javax.swing.table DefaultTableModel TableCellRenderer)
   '(javax.swing.event TableModelListener)
   '(java.awt.event ActionListener ItemListener)
@@ -215,7 +215,7 @@
        user-label (JLabel. "user:")
        user-text (JTextField. "root")
        password-label (JLabel. "password:")
-       password-text (JTextField. "")
+       password-text (JPasswordField. "")
        connect-button (JButton. "Connect")
        tmp-label (JLabel. "status: disconnected!")]
     (.addActionListener
