@@ -2,9 +2,9 @@
   (:use clojure.java.jdbc))
 
 (import
-  '(javax.swing JFrame JLabel JTextField JPasswordField JButton JComboBox JTable JPanel JScrollPane)
+  '(javax.swing JFrame JLabel JTextField JButton JComboBox JTable JPanel JScrollPane)
   '(javax.swing.table DefaultTableModel TableCellRenderer)
-  '(javax.swing.event TableModelListener)
+  '(javax.swing.event TableModelListener ListSelectionListener)
   '(java.awt.event ActionListener ItemListener)
   '(java.util Vector)
   '(java.awt GridLayout Color GridBagLayout BorderLayout ComponentOrientation Dimension)
@@ -12,7 +12,7 @@
 
 ; DEFS
 (def columns ["table"])
-(def data [["please select an table in dropdown"]])
+(def data [["please select a table in dropdown"]])
 (def selectedtable "")
 (def table (JTable. ))
 (def model (proxy [DefaultTableModel]  [(to-array-2d data) (into-array columns)]))
@@ -107,8 +107,7 @@
         (doto newpane
           (.add top-newpanel BorderLayout/PAGE_START)
           (.add table-newentry BorderLayout/CENTER)
-          (.add footer-newpanel BorderLayout/PAGE_END)
-          )))
+          (.add footer-newpanel BorderLayout/PAGE_END))))
     (.pack newframe)
     (.revalidate newframe)
     (.setVisible newframe true)))
@@ -116,6 +115,13 @@
 ; Editor GUI
 (defn editor-frame [db]
   (def tablenames (get-database-tables db))
+  (def selmod (.getSelectionModel table))
+
+  (.addListSelectionListener selmod
+      (reify ListSelectionListener
+        (valueChanged
+          [_ evt]
+          (println (doto table (.getSelectedRow))))))
 
   (let [frame (JFrame. "Database Table Editor")
         pane (.getContentPane frame) ]
@@ -130,7 +136,7 @@
                             (def selectedtable (.getSelectedItem choose-combo))
                             (def columndata (get-table-columns db (.getSelectedItem choose-combo)))
                             (def tabledata (get-table-data db (.getSelectedItem choose-combo)))
-                            (def model (proxy [DefaultTableModel]  [tabledata columndata]))
+                            (def model (proxy [DefaultTableModel] [tabledata columndata]))
                             (.setModel table model))))
 
                       (doto choose-frame
@@ -153,7 +159,7 @@
                              (actionPerformed
                                [_ evt]
                                ; EVENT NEW
-                               (new-frame db)
+                         (new-frame db)
                                )))
                          (.addActionListener
                            delete-button
@@ -161,21 +167,21 @@
                              (actionPerformed
                                [_ evt]
                                ; EVENT DELETE
-                               )))
+                         )))
                          (.addActionListener
                            export-button
                            (reify ActionListener
                              (actionPerformed
                                [_ evt]
                                ; EVENT EXPORT
-                               )))
+                         )))
                           (.addActionListener
                            cmd-button
                            (reify ActionListener
                              (actionPerformed
                                [_ evt]
                                 ; EVENT CMD
-                                (cmd-frame db)
+                          (cmd-frame db)
                                )))
 
                            (doto button-frame
@@ -184,16 +190,10 @@
                              (.add cmd-button)
                              (.add entry-label)
                              (.add delete-button)
-                             (.add insert-button)))
-
-          ;ToDo: Fix tableListener
-          tListener   (proxy [TableModelListener] []
-                        (tableChanged [event]
-                          (println "Table Update!")))]
+                             (.add insert-button)))]
     (do
       (.setComponentOrientation pane ComponentOrientation/RIGHT_TO_LEFT)
       (.setModel table model)
-      (.addTableModelListener model tListener)
         (doto pane
           (.add top-panel BorderLayout/PAGE_START)
           (.add table-panel BorderLayout/CENTER)
@@ -215,7 +215,7 @@
        user-label (JLabel. "user:")
        user-text (JTextField. "root")
        password-label (JLabel. "password:")
-       password-text (JPasswordField. "")
+       password-text (JTextField. "")
        connect-button (JButton. "Connect")
        tmp-label (JLabel. "status: disconnected!")]
     (.addActionListener
