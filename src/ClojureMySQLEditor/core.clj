@@ -234,8 +234,8 @@
         choose-label (JLabel. "choose table:")
         choose-combo (JComboBox. (Vector. tablenames))
         
-        center-panel (JScrollPane. table)
-        
+        center-table (JScrollPane. table)
+
         footer-panel (JPanel.)
         table-label (JLabel. "table options:")
         export-button (JButton. "export")
@@ -243,6 +243,12 @@
         entry-label (JLabel. "entry options:")
         insert-button (JButton. "new")
        ]
+    
+    ; Default Model setzen
+    (.setModel table model)
+    
+    ; ToDo: Funktion bisher nicht unterstüzt.
+    (.setEnabled export-button false)
     
     ; ActionListener der Dropdownbox, ändert den Inhalt der Tabelle
     (.addActionListener
@@ -264,8 +270,13 @@
           [_ evt]
           ; EVENT NEW
           ; Prüfen ob JTable mit Inhalt gefüllt ist.
-          (if (> (.getRowCount table) 0)
-            (new-frame db)))))
+          (if (.equals selectedtable "")
+            [
+             (println "Please select a table.")
+            ]
+            [
+             (new-frame db)
+            ]))))
     
     ; ActionListener für Export Button
     (.addActionListener
@@ -321,7 +332,7 @@
     ; Zusammenbauen des Frames
     (doto frame
       (.add top-panel BorderLayout/PAGE_START)
-      (.add center-panel BorderLayout/CENTER)
+      (.add center-table BorderLayout/CENTER)
       (.add footer-panel BorderLayout/PAGE_END)
       (.pack)
       (.setVisible true))))
@@ -430,3 +441,12 @@
 
 ; Starten der Anwendung
 (databaseconnect)
+
+
+; ToDo:
+; - Eine Funktion, die die JTable updated. (Modeldaten neu setzen, siehe Dropwdown ActionListener)
+; - Füllen des ActionListeners für SQL Commands.
+; - Logik zum Abspeichern eines neuen Eintrags.
+; - Logik zum Abspeichern eines bearbeitenden Eintrags.
+
+; - Nice to have: Exportfunktion für die ganze Datenbank in ein SQL File.
