@@ -74,7 +74,7 @@
            (def rowstack (conj rowstack (str (val value)))))
          ])
        (def i (inc i))))
-   rowstack))
+   (reverse rowstack)))
 
 ; Export Database
 (defn export-db 
@@ -199,9 +199,7 @@
   
   ; ToDo - Finde den Fehler !!!!
   (def rowdata (get-table-row-data db selectedtable selrow))
-  (println (to-array-2d rowdata))
-  (println rowdata)
-  (def editdata (to-array-2d [["","","","","",""]]))
+  (def editdata (to-array-2d [rowdata]))
   
   (let [
         editframe (JFrame. "Database Edit Entry")
