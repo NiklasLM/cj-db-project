@@ -76,6 +76,19 @@
        (def i (inc i))))
    (reverse rowstack)))
 
+; Funktion aktualisiert die Änderungen in der Datenbank
+; ToDo: SQL Statement
+(defn update-sqldata [db, olddata, newdata]
+  (println olddata)
+  (println newdata)
+  (println "Update goes here!"))
+
+; Funktion fügt einen Eintrag in die Datenbank hinzu
+; ToDo: SQL Statement
+(defn insert-sqldata [db, newdata]
+  (println newdata)
+  (println "Insert goes here!"))
+
 ; Export Database
 (defn export-db 
   [ ]
@@ -168,6 +181,13 @@
         (actionPerformed
           [_ evt]
           ; EVENT SAVE
+          (def newtable-colCount (.getColumnCount newtable))
+          (def newtable-rowCount (.getRowCount newtable))
+          ; Alle Werte in ein Array
+          (def newtable-data [])
+          (dotimes [n newtable-colCount] (def newtable-data (conj newtable-data (.getValueAt newtable 0 n))))
+          ; Funktionsaufruf für InsertTable
+          (insert-sqldata db newtable-data)
           (.setVisible newframe false))))
     
     ; ActionListener für den Cancel Button
@@ -197,8 +217,8 @@
 (defn edit-entry
   [db, selrow]
   
-  ; ToDo - Finde den Fehler !!!!
   (def rowdata (get-table-row-data db selectedtable selrow))
+  (def olddata rowdata)
   (def editdata (to-array-2d [rowdata]))
   
   (let [
@@ -222,6 +242,13 @@
         (actionPerformed
           [_ evt]
           ; EVENT SAVE
+          (def colCount (.getColumnCount edit-table))
+          (def rowCount (.getRowCount edit-table))
+          ; Alle Werte in ein Array
+          (def newdata [])
+          (dotimes [n colCount] (def newdata (conj newdata (.getValueAt edit-table 0 n))))
+          ; Funktionsaufruf für UpdateTable
+          (update-sqldata db olddata newdata)
           (.setVisible editframe false))))
     
     ; ActionListener für den Cancel Button
@@ -483,6 +510,7 @@
 ; ToDo:
 ; - Eine Funktion, die die JTable updated. (Modeldaten neu setzen, siehe Dropwdown ActionListener)
 ; - Füllen des ActionListeners für SQL Commands.
-; - Logik zum Abspeichern eines neuen Eintrags.
+; - Funktion "update-sqldata" - Daten in DB aktualisieren
+; - Funktion "inser-sqldata" - Daten in DB schreiben
 ; - Logik zum Abspeichern eines bearbeitenden Eintrags.
 ; - Exportfunktion für die ganze Datenbank in ein SQL File.
