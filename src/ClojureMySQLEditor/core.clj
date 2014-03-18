@@ -3,10 +3,11 @@
 
 ; Java-Bibliotheken importieren
 (import
-  '(javax.swing DefaultCellEditor JFrame JLabel JTextField JButton JComboBox JTable JPanel JScrollPane JPasswordField JTextArea)
+  '(javax.swing ListSelectionModel JFileChooser DefaultCellEditor JFrame JLabel JTextField JButton JComboBox JTable JPanel JScrollPane JPasswordField JTextArea)
   '(javax.swing.table DefaultTableModel TableCellRenderer)
   '(javax.swing.event TableModelListener ListSelectionListener)
   '(java.awt.event ActionListener ItemListener)
+  '(javax.swing.filechooser FileNameExtensionFilter)
   '(javax.swing.border EmptyBorder)
   '(java.util Vector)
   '(java.awt GridLayout Color GridBagLayout BorderLayout ComponentOrientation Dimension)
@@ -57,6 +58,39 @@
          (def rowstack (conj rowstack (str (val value)))))
        (def rsstack (conj rsstack (reverse rowstack))))
      (to-array-2d rsstack))))
+
+
+; Gibt die Daten einer selektierten Zeile zurück
+(defn get-table-row-data [db, table, column]
+  (def cols (clojure.string/join (interpose ", " (get-table-columns db table))))
+  (with-connection db
+   (with-query-results rs [(str "select " cols " from " table)]
+     (def i 0)
+     (doseq [row rs]
+       (if (= i column)
+         [
+         (def rowstack [])
+         (doseq [value row]
+           (def rowstack (conj rowstack (str (val value)))))
+         ])
+       (def i (inc i))))
+   rowstack))
+
+; Export Database
+(defn export-db 
+  [ ]
+  (let [
+        extFilter (FileNameExtensionFilter. "SQL (.sql)" (into-array  ["sql"]))
+        filechooser (JFileChooser. "C:/")
+        dummy (.setFileFilter filechooser extFilter)
+        retval (.showSaveDialog filechooser nil)
+       ]
+    
+    (if (= retval JFileChooser/APPROVE_OPTION)
+      (do
+        (println (.getSelectedFile filechooser))
+        (.getSelectedFile filechooser))
+      "")))
 
 ; SQL Command Fenster, führt einen SQL Befehl auf der Datenbank aus.
 (defn cmd-frame 
@@ -161,8 +195,12 @@
 ; Edit Fenster
 ; Zeigt den Inhalt einer Zeile
 (defn edit-entry
-  [db, seldataone, seldatatwo, seldatathree]
-
+  [db, selrow]
+  
+  ; ToDo - Finde den Fehler !!!!
+  (def rowdata (get-table-row-data db selectedtable selrow))
+  (println (to-array-2d rowdata))
+  (println rowdata)
   (def editdata (to-array-2d [["","","","","",""]]))
   
   (let [
@@ -246,6 +284,9 @@
     
     ; Default Model setzen
     (.setModel table model)
+    (doto table
+      (.setSelectionMode ListSelectionModel/SINGLE_SELECTION))
+    (-> table .getTableHeader (.setReorderingAllowed false))
     
     ; ToDo: Funktion bisher nicht unterstüzt.
     (.setEnabled export-button false)
@@ -285,6 +326,7 @@
         (actionPerformed
           [_ evt]
           ; EVENT EXPORT
+          (export-db)
           )))
     
     ;ActionListener für Command Button, öffnet neues Frame
@@ -308,11 +350,8 @@
             (if (.equals selectedtable (.getSelectedItem choose-combo))
               [
                (def selrow (.getSelectedRow table))
-               (def seldataone (.getValueAt table selrow 0))
-               (def seldatatwo (.getValueAt table selrow 1))
-               (def seldatathree (.getValueAt table selrow 2))
                ; Aufruf zum Bearbeiten in neuem Fenster
-               (edit-entry db, seldataone, seldatatwo, seldatathree)
+               (edit-entry db, selrow)
               ])
             ]))))
     
@@ -448,5 +487,4 @@
 ; - Füllen des ActionListeners für SQL Commands.
 ; - Logik zum Abspeichern eines neuen Eintrags.
 ; - Logik zum Abspeichern eines bearbeitenden Eintrags.
-
-; - Nice to have: Exportfunktion für die ganze Datenbank in ein SQL File.
+; - Exportfunktion für die ganze Datenbank in ein SQL File.
