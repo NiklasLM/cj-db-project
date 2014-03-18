@@ -74,50 +74,56 @@
 	   (.pack))))
 
 ; New Entry GUI
-(defn new-frame [db]
+(defn new-frame
+  [db]
   (def newcols (get-table-columns db selectedtable))
   (def sizecols (count newcols))
 
   (def newdata (to-array-2d [["","","","","",""]]))
 
-  (let [newframe (JFrame. "Database New Entry")
-        newpane (.getContentPane newframe) ]
-    (let [top-newpanel (JLabel. "New data entry:")
-          newtable (JTable. newdata  newcols)
-          table-newentry (JScrollPane. newtable)
-          footer-newpanel (let [button-newframe (JPanel.)
-                                save-button (JButton. "save")
-                                cancel-button (JButton. "cancel")]
-
-                         (.addActionListener
-                           save-button
-                           (reify ActionListener
-                             (actionPerformed
-                               [_ evt]
-                               ; EVENT SAVE
-                               (.setVisible newframe false)
-                               )))
-                         (.addActionListener
-                           cancel-button
-                           (reify ActionListener
-                             (actionPerformed
-                               [_ evt]
-                               ; EVENT CANCEL
-                               (.setVisible newframe false)
-                               )))
-
-                           (doto button-newframe
-                             (.add save-button)
-                             (.add cancel-button)))]
-    (do
-      (.setComponentOrientation newpane ComponentOrientation/RIGHT_TO_LEFT)
-        (doto newpane
-          (.add top-newpanel BorderLayout/PAGE_START)
-          (.add table-newentry BorderLayout/CENTER)
-          (.add footer-newpanel BorderLayout/PAGE_END))))
-    (.pack newframe)
-    (.revalidate newframe)
-    (.setVisible newframe true)))
+  (let [
+        newframe (JFrame. "Database New Entry")
+        
+        top-newpanel (JLabel. "New data entry:")
+        
+        newtable (JTable. newdata  newcols)
+        table-pane (JScrollPane. newtable)
+        
+        button-newframe (JPanel.)
+        save-button (JButton. "save")
+        cancel-button (JButton. "cancel")
+       ]
+    
+    ; ActionListenere für den Save Button
+    (.addActionListener
+      save-button
+      (reify ActionListener
+        (actionPerformed
+          [_ evt]
+          ; EVENT SAVE
+          (.setVisible newframe false))))
+    
+    ; ActionListener für den Cancel Button
+    (.addActionListener
+      cancel-button
+      (reify ActionListener
+        (actionPerformed
+          [_ evt]
+          ; EVENT CANCEL
+          (.setVisible newframe false))))
+    
+    ; Zusammenbauen des Button frames
+    (doto button-newframe
+      (.add save-button)
+      (.add cancel-button))
+    
+    ; Zusammenbauen des Frames
+    (doto newframe
+      (.add top-newpanel BorderLayout/PAGE_START)
+      (.add table-pane BorderLayout/CENTER)
+      (.add button-newframe BorderLayout/PAGE_END)
+      (.pack)
+      (.setVisible true))))
 
 ; Editor GUI
 ; Zeigt den Inhalt einer Tabelle an
@@ -143,17 +149,18 @@
         delete-button (JButton. "delete")
         insert-button (JButton. "new")
        ]
+    
     ; ActionListener der Dropdownbox, ändert den Inhalt der Tabelle
     (.addActionListener
       choose-combo
       (reify ActionListener
         (actionPerformed
           [_ evt]
-          (def selectedtable (.getSelectedItem choose-combo))
           (def columndata (get-table-columns db (.getSelectedItem choose-combo)))
           (def tabledata (get-table-data db (.getSelectedItem choose-combo)))
           (def model (proxy [DefaultTableModel] [tabledata columndata]))
-          (.setModel table model))))
+          (.setModel table model)
+          (def selectedtable (.getSelectedItem choose-combo)))))
     
     ; ActionListener für New Button, fügt neue Zeile hinzu
     (.addActionListener
@@ -196,9 +203,13 @@
      (reify ListSelectionListener
       (valueChanged
          [_ evt]
-         (def selrow (.getSelectedRow table))
-         (def seldata (.getValueAt table selrow 1))
-         (println "Update data!"))))
+         ; Pürfen ob ausgewählte Tabelle wirklich gleich ist
+         (if (.equals selectedtable (.getSelectedItem choose-combo))
+           [
+            (def selrow (.getSelectedRow table))
+            (def seldata (.getValueAt table selrow 1))
+            (println "Update data!")
+            ]))))
     
     ; Zusammenbauen des Top Panels
     (doto top-panel
