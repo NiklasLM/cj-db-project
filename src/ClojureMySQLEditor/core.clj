@@ -3,7 +3,7 @@
 
 ; Java-Bibliotheken importieren
 (import
-  '(javax.swing JFrame JLabel JTextField JButton JComboBox JTable JPanel JScrollPane JPasswordField)
+  '(javax.swing DefaultCellEditor JFrame JLabel JTextField JButton JComboBox JTable JPanel JScrollPane JPasswordField JTextArea)
   '(javax.swing.table DefaultTableModel TableCellRenderer)
   '(javax.swing.event TableModelListener ListSelectionListener)
   '(java.awt.event ActionListener ItemListener)
@@ -58,27 +58,60 @@
        (def rsstack (conj rsstack (reverse rowstack))))
      (to-array-2d rsstack))))
 
-; CMD GUI
-(defn cmd-frame [db]
-  (let [cmdframe (JFrame. "Command:")
-        cmdlabel (JLabel. "SQL Command:")
-        cmdtext (JTextField.)
-        cmdexecute (JButton. "execute")]
-
+; SQL Command Fenster, führt einen SQL Befehl auf der Datenbank aus.
+(defn cmd-frame 
+  [db]
+  (let [
+        cmdframe (JFrame. "Command:")
+        
+        cmd-top-panel (JPanel.)
+        cmd-label (JLabel. "SQL Command:")
+       
+        cmd-text (JTextArea. 15 1)
+        
+        cmd-footer-panel (JPanel.)
+        cmd-button-execute (JButton. "execute")
+        cmd-button-cancel (JButton. "cancel")
+       ]
+    ; ActionListenere für den Execute Button
+    (.addActionListener
+      cmd-button-execute
+      (reify ActionListener
+        (actionPerformed
+          [_ evt]
+          ; Execute
+          (.setVisible cmdframe false))))
+    
+    ; ActionListenere für den Cancel Button
+    (.addActionListener
+      cmd-button-cancel
+      (reify ActionListener
+        (actionPerformed
+          [_ evt]
+          ; Cancel
+          (.setVisible cmdframe false))))
+    
+    (doto cmd-top-panel
+      (.setBorder (EmptyBorder. 10 10 10 10))
+      (.add cmd-label))
+    
+    (doto cmd-footer-panel
+      (.setBorder (EmptyBorder. 10 10 10 10))
+      (.add cmd-button-execute)
+      (.add cmd-button-cancel))
+    
     (doto cmdframe
-	   (.setLayout (GridLayout. 3 1))
-	   (.add cmdlabel)
-     (.add cmdtext)
-     (.add cmdexecute)
-	   (.setVisible true)
-	   (.pack))))
+	   (.add cmd-top-panel BorderLayout/PAGE_START)
+     (.add cmd-text BorderLayout/CENTER)
+     (.add cmd-footer-panel BorderLayout/PAGE_END)
+     (.setSize 500 400)
+     (.setVisible true))))
 
 ; New Entry GUI
 (defn new-frame
   [db]
   (def newcols (get-table-columns db selectedtable))
   (def sizecols (count newcols))
-
   (def newdata (to-array-2d [["","","","","",""]]))
 
   (let [
@@ -122,7 +155,69 @@
       (.add top-newpanel BorderLayout/PAGE_START)
       (.add table-pane BorderLayout/CENTER)
       (.add button-newframe BorderLayout/PAGE_END)
-      (.pack)
+      (.setSize 600 130)
+      (.setVisible true))))
+
+; Edit Fenster
+; Zeigt den Inhalt einer Zeile
+(defn edit-entry
+  [db, seldataone, seldatatwo, seldatathree]
+
+  (def editdata (to-array-2d [["","","","","",""]]))
+  
+  (let [
+        editframe (JFrame. "Database Edit Entry")
+        
+        edit-toppanel (JLabel. "Edit entry:")
+        
+        edit-table (JTable. editdata  (get-table-columns db selectedtable))
+        edit-pane (JScrollPane. edit-table)
+        
+        edit-buttonframe (JPanel.)
+        edit-save-button (JButton. "save")
+        edit-cancel-button (JButton. "cancel")
+        edit-delete-button (JButton. "delete")
+       ]
+    
+    ; ActionListenere für den Save Button
+    (.addActionListener
+      edit-save-button
+      (reify ActionListener
+        (actionPerformed
+          [_ evt]
+          ; EVENT SAVE
+          (.setVisible editframe false))))
+    
+    ; ActionListener für den Cancel Button
+    (.addActionListener
+     edit-cancel-button
+      (reify ActionListener
+        (actionPerformed
+          [_ evt]
+          ; EVENT CANCEL
+          (.setVisible editframe false))))
+    
+    ; ActionListener für den Delete Button
+    (.addActionListener
+     edit-delete-button
+      (reify ActionListener
+        (actionPerformed
+          [_ evt]
+          ; EVENT CANCEL
+          (.setVisible editframe false))))
+    
+    ; Zusammenbauen des Button frames
+    (doto edit-buttonframe
+      (.add edit-save-button)
+      (.add edit-cancel-button)
+      (.add edit-delete-button))
+    
+    ; Zusammenbauen des Frames
+    (doto editframe
+      (.add edit-toppanel BorderLayout/PAGE_START)
+      (.add edit-pane BorderLayout/CENTER)
+      (.add edit-buttonframe BorderLayout/PAGE_END)
+      (.setSize 600 130)
       (.setVisible true))))
 
 ; Editor GUI
@@ -146,7 +241,6 @@
         export-button (JButton. "export")
         cmd-button (JButton. "cmd")
         entry-label (JLabel. "entry options:")
-        delete-button (JButton. "delete")
         insert-button (JButton. "new")
        ]
     
@@ -169,16 +263,9 @@
         (actionPerformed
           [_ evt]
           ; EVENT NEW
-          (new-frame db))))
-    
-    ; ActionListener für Delete Button, löscht die Ausgewählte Zeile
-    (.addActionListener
-      delete-button
-      (reify ActionListener
-        (actionPerformed
-          [_ evt]
-          ; EVENT DELETE
-          )))
+          ; Prüfen ob JTable mit Inhalt gefüllt ist.
+          (if (> (.getRowCount table) 0)
+            (new-frame db)))))
     
     ; ActionListener für Export Button
     (.addActionListener
@@ -199,16 +286,23 @@
           (cmd-frame db))))
     
     ; JTable Action Listener
-    (.addListSelectionListener (.getSelectionModel table)
+    (def selmod (.getSelectionModel table))
+    (.addListSelectionListener selmod
      (reify ListSelectionListener
       (valueChanged
          [_ evt]
-         ; Pürfen ob ausgewählte Tabelle wirklich gleich ist
-         (if (.equals selectedtable (.getSelectedItem choose-combo))
+         ; Prüfen ob ausgewählte Tabelle wirklich gleich ist
+         (if (.getValueIsAdjusting selmod)
            [
-            (def selrow (.getSelectedRow table))
-            (def seldata (.getValueAt table selrow 1))
-            (println "Update data!")
+            (if (.equals selectedtable (.getSelectedItem choose-combo))
+              [
+               (def selrow (.getSelectedRow table))
+               (def seldataone (.getValueAt table selrow 0))
+               (def seldatatwo (.getValueAt table selrow 1))
+               (def seldatathree (.getValueAt table selrow 2))
+               ; Aufruf zum Bearbeiten in neuem Fenster
+               (edit-entry db, seldataone, seldatatwo, seldatathree)
+              ])
             ]))))
     
     ; Zusammenbauen des Top Panels
@@ -222,7 +316,6 @@
       (.add export-button)
       (.add cmd-button)
       (.add entry-label)
-      (.add delete-button)
       (.add insert-button))
 
     ; Zusammenbauen des Frames
@@ -296,6 +389,7 @@
     (doto tmp-label
       (.setForeground (. Color red)))
     
+    ; Disable Protokollfeld
     (doto protcol-text
       (.setEnabled false))
     
