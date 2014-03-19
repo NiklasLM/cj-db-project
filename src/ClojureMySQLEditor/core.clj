@@ -4,9 +4,9 @@
 ; Homepage: www.thm.de
 ; Modul: Programmieren in Clojure
 ;
-; Diese Anwendung verbindet sich mit einer MySQL Datenbank und stellt diese grafisch dar.
-; Zusätzlich können Operationen wie Bearbeiten, Hinzufügen, Löschen, Kommandozeile und Exportieren
-; der Datenbank vorgenommen werden.
+; Diese Anwendung verbindet sich mit einer MySQL-Datenbank und stellt den Inhalt dar.
+; Zusätzlich können Funktionen wie Bearbeiten, Hinzufügen, Löschen, Kommandozeile und Exportieren
+; der Datenbank ausgeführt werden.
 ;
 ; (C) by
 ; Niklas Simonis
@@ -15,7 +15,9 @@
 (ns ClojureMySQLEditor.core
  (:require [clojure.java.jdbc :as jdbc])
  (:use clojure.java.jdbc)
- (:use clojure.walk))
+ (:use clojure.walk)
+ (:use clojure.java.io)
+)
 
 ; Java-Bibliotheken importieren
 (import
@@ -28,7 +30,8 @@
   '(java.util Vector)
   '(java.awt GridLayout Color GridBagLayout BorderLayout ComponentOrientation Dimension)
   '(java.sql SQLException)
-  '(com.mysql.jdbc.exceptions.jdbc4 MySQLSyntaxErrorException))
+  '(com.mysql.jdbc.exceptions.jdbc4 MySQLSyntaxErrorException)
+  )
 
 ; Globale Variablen
 ; Spalten
@@ -227,21 +230,46 @@
           (.setModel table model)
           (def lock false))
 
-; Export Database
+; Export die ausgewählte Tabelle in eine Datei
 (defn export-db 
-  [ ]
+  [db]
   (let [
         extFilter (FileNameExtensionFilter. "SQL (.sql)" (into-array  ["sql"]))
-        filechooser (JFileChooser. "C:/")
+        filechooser (JFileChooser. (System/getProperty "user.home"))
         dummy (.setFileFilter filechooser extFilter)
         retval (.showSaveDialog filechooser nil)
        ]
     
     (if (= retval JFileChooser/APPROVE_OPTION)
-      (do
-        (println (.getSelectedFile filechooser))
-        (.getSelectedFile filechooser))
-      "")))
+      ;then
+      [
+       (def filename (.getSelectedFile filechooser))
+       (if (.endsWith (str filename) ".sql")
+         [
+          ;Nothing yet
+          ]
+         [
+          (def filename (str filename ".sql"))
+          ]
+         )
+      
+       ; Daten holen
+
+       ; In Datei schreiben
+       (with-open [wrtr (writer filename)]
+         (.write wrtr "Line to be written"))
+       ]
+      ;else
+      [
+       ]
+      )))
+
+
+; Import Database
+; Bisher nicht vorhanden.
+(defn import-db
+  [ ]
+  )
 
 ; Funktion die das SQL Statement ausführt
 (defn execute-sql-command
@@ -480,7 +508,7 @@
         center-table (JScrollPane. table)
 
         footer-panel (JPanel.)
-        table-label (JLabel. "db options:")
+        table-label (JLabel. "table options:")
         export-button (JButton. "export")
         import-button (JButton. "import")
         cmd-button (JButton. "cmd")
@@ -495,8 +523,8 @@
     (-> table .getTableHeader (.setReorderingAllowed false))
     
     ; ToDo: Funktion bisher nicht unterstüzt.
-    (.setEnabled export-button false)
-    (.setEnabled import-button false)
+    ;(.setEnabled export-button false)
+    ;(.setEnabled import-button false)
     
     ; ActionListener der Dropdownbox, ändert den Inhalt der Tabelle
     (.addActionListener
@@ -533,7 +561,7 @@
         (actionPerformed
           [_ evt]
           ; EVENT EXPORT
-          (export-db)
+          (export-db db)
           )))
     
     ; ActionListener für Export Button
@@ -543,7 +571,7 @@
         (actionPerformed
           [_ evt]
           ; EVENT IMPORT
-          ; ToDo:
+          (import-db)
           )))
     
     ;ActionListener für Command Button, öffnet neues Frame
@@ -585,7 +613,7 @@
     (doto footer-panel
       (.add table-label)
       (.add export-button)
-      (.add import-button)
+      ;(.add import-button)
       (.add cmd-button)
       (.add entry-label)
       (.add insert-button))
@@ -704,4 +732,4 @@
 (databaseconnect)
 
 ; ToDo:
-; - Exportfunktion für die ganze Datenbank in ein SQL File.
+; - Export-/Importfunktion für die ganze Datenbank aus/in ein SQL File.
