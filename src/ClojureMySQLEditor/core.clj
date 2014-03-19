@@ -27,7 +27,8 @@
   '(javax.swing.border EmptyBorder)
   '(java.util Vector)
   '(java.awt GridLayout Color GridBagLayout BorderLayout ComponentOrientation Dimension)
-  '(java.sql.*))
+  '(java.sql SQLException)
+  '(com.mysql.jdbc.exceptions.jdbc4 MySQLSyntaxErrorException))
 
 ; Globale Variablen
 ; Spalten
@@ -242,6 +243,32 @@
         (.getSelectedFile filechooser))
       "")))
 
+; Funktion die das SQL Statement ausführt
+(defn execute-sql-command
+  [db, command]
+  (if (.equals "" command)
+    ;then
+    [
+     (println "Nothing to do!")
+     ]
+    ;else
+    [   
+     (try
+       (with-connection db
+         (jdbc/query db [command]))
+       (println "Execute successful")
+       (catch MySQLSyntaxErrorException e
+         (def reason "Execute failed. You have an error in your SQL syntax; check the manual!")
+         (error-frame reason))
+       (catch SQLException e
+         (def reason "Execute failed. SQL Error!")
+         (error-frame reason))
+       (catch Exception e
+         (def reason "execute failed!")
+         (println e)
+         (error-frame reason)))
+     ]))
+
 ; SQL Command Fenster, führt einen SQL Befehl auf der Datenbank aus.
 (defn cmd-frame 
   [db]
@@ -264,6 +291,8 @@
         (actionPerformed
           [_ evt]
           ; Execute
+          (def commandtext (.getText cmd-text))
+          (execute-sql-command db commandtext)
           (.setVisible cmdframe false))))
     
     ; ActionListenere für den Cancel Button
@@ -451,8 +480,9 @@
         center-table (JScrollPane. table)
 
         footer-panel (JPanel.)
-        table-label (JLabel. "table options:")
+        table-label (JLabel. "db options:")
         export-button (JButton. "export")
+        import-button (JButton. "import")
         cmd-button (JButton. "cmd")
         entry-label (JLabel. "entry options:")
         insert-button (JButton. "new")
@@ -466,6 +496,7 @@
     
     ; ToDo: Funktion bisher nicht unterstüzt.
     (.setEnabled export-button false)
+    (.setEnabled import-button false)
     
     ; ActionListener der Dropdownbox, ändert den Inhalt der Tabelle
     (.addActionListener
@@ -503,6 +534,16 @@
           [_ evt]
           ; EVENT EXPORT
           (export-db)
+          )))
+    
+    ; ActionListener für Export Button
+    (.addActionListener
+      import-button
+      (reify ActionListener
+        (actionPerformed
+          [_ evt]
+          ; EVENT IMPORT
+          ; ToDo:
           )))
     
     ;ActionListener für Command Button, öffnet neues Frame
@@ -544,6 +585,7 @@
     (doto footer-panel
       (.add table-label)
       (.add export-button)
+      (.add import-button)
       (.add cmd-button)
       (.add entry-label)
       (.add insert-button))
@@ -662,5 +704,4 @@
 (databaseconnect)
 
 ; ToDo:
-; - Füllen des ActionListeners für SQL Commands.
 ; - Exportfunktion für die ganze Datenbank in ein SQL File.
