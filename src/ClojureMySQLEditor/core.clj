@@ -590,11 +590,6 @@
 ; Starten der Anwendung
 (databaseconnect)
 
-
 ; ToDo:
-; - Eine Funktion, die die JTable updated. (Modeldaten neu setzen, siehe Dropwdown ActionListener)
 ; - Füllen des ActionListeners für SQL Commands.
-; - Funktion "update-sqldata" - Daten in DB aktualisieren
-; - Funktion "inser-sqldata" - Daten in DB schreiben
-; - Logik zum Abspeichern eines bearbeitenden Eintrags.
 ; - Exportfunktion für die ganze Datenbank in ein SQL File.
