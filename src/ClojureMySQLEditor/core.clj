@@ -29,6 +29,51 @@
 ; Lock
 (def lock false)
 
+
+; Warnungsfenster bei Fehler
+(defn error-frame
+  [err-reason]
+  (println (str "Error: " err-reason))
+  (let [
+        err-frame (JFrame. "Error Message")
+        
+        err-top-panel (JPanel.)
+        err-top-label (JLabel. "Reason:")
+        
+        err-center-panel (JPanel.)
+        err-center-label (JLabel. err-reason)
+        
+        err-footer-panel (JPanel.)
+        err-footer-button (JButton. "Close")
+       ]
+    ; Farbe setzen
+    (.setForeground err-top-label (. Color red))
+    
+    ;ActionListener für Close Button
+    (.addActionListener
+      err-footer-button
+      (reify ActionListener
+        (actionPerformed
+          [_ evt]
+          ; EVENT CMD
+          (.setVisible err-frame false))))
+    
+    (doto err-top-panel
+      (.add err-top-label))
+    
+    (doto err-center-panel
+      (.add err-center-label))
+    
+    (doto err-footer-panel
+      (.add err-footer-button))
+    
+    (doto err-frame
+      (.add err-top-panel BorderLayout/PAGE_START)
+      (.add err-center-panel BorderLayout/CENTER)
+      (.add err-footer-panel BorderLayout/PAGE_END)
+      (.setSize 200 150)
+      (.setVisible true))))
+
 ; Datenbanktabellen
 (defn get-database-tables [db]
     (with-connection db
@@ -113,8 +158,12 @@
      (def sqlkey (str primarykey " = ?"))
      (def sqlval (val (find oldmap (keyword primarykey))))
      
+     (try
      (with-connection db
       (jdbc/update! db (keyword selectedtable) updatemap [sqlkey sqlval]))
+     (catch Exception e
+             (def reason "update failed!")
+             (error-frame reason)))
      ]
     ))
 
@@ -126,8 +175,12 @@
   (def newmap (zipmap newtablecols newdata))
   (def newmap (keywordize-keys newmap))
   
+  (try
   (with-connection db
-      (jdbc/insert! db (keyword selectedtable) newmap)))
+      (jdbc/insert! db (keyword selectedtable) newmap))
+  (catch Exception e
+             (def reason "insert failed!")
+             (error-frame reason))))
 
 ; Funktion zum löschen eines Eintrags
 (defn delete-sqldata
@@ -141,9 +194,13 @@
   
   (def delsqlkey (str delprimarykey " = ?"))
   (def delsqlval (val (find delmap (keyword delprimarykey))))
-   
-  (with-connection db
-      (jdbc/delete! db (keyword selectedtable) [delsqlkey delsqlval])))
+  
+  (try
+    (with-connection db
+      (jdbc/delete! db (keyword selectedtable) [delsqlkey delsqlval]))
+  (catch Exception e
+             (def reason "delete failed!")
+             (error-frame reason))))
 
 ; Aktualisieren der JTable
 (defn refresh-table
