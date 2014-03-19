@@ -119,10 +119,41 @@
     ))
 
 ; Funktion fügt einen Eintrag in die Datenbank hinzu
-; ToDo: SQL Statement
-(defn insert-sqldata [db, newdata]
-  (println newdata)
-  (println "Insert goes here!"))
+(defn insert-sqldata 
+  [db, newdata]
+  ; Holen aller Spalten
+  (def newtablecols (get-table-columns db selectedtable))
+  (def newmap (zipmap newtablecols newdata))
+  (def newmap (keywordize-keys newmap))
+  
+  (with-connection db
+      (jdbc/insert! db (keyword selectedtable) newmap)))
+
+; Funktion zum löschen eines Eintrags
+(defn delete-sqldata
+  [db, data]
+  
+  (def deltablecols (get-table-columns db selectedtable))
+  (def delprimarykey (primary-keys db))
+  
+  (def delmap (zipmap deltablecols data))
+  (def delmap (keywordize-keys delmap))
+  
+  (def delsqlkey (str delprimarykey " = ?"))
+  (def delsqlval (val (find delmap (keyword delprimarykey))))
+   
+  (with-connection db
+      (jdbc/delete! db (keyword selectedtable) [delsqlkey delsqlval])))
+
+; Aktualisieren der JTable
+(defn refresh-table
+  [db]
+  (def lock true)
+          (def columndata (get-table-columns db selectedtable))
+          (def tabledata (get-table-data db selectedtable))
+          (def model (proxy [DefaultTableModel] [tabledata columndata]))
+          (.setModel table model)
+          (def lock false))
 
 ; Export Database
 (defn export-db 
@@ -223,6 +254,9 @@
           (dotimes [n newtable-colCount] (def newtable-data (conj newtable-data (.getValueAt newtable 0 n))))
           ; Funktionsaufruf für InsertTable
           (insert-sqldata db newtable-data)
+          ; Aktualisieren der JTable
+          (refresh-table db)
+          ; Ausblenden des Frames
           (.setVisible newframe false))))
     
     ; ActionListener für den Cancel Button
@@ -285,12 +319,7 @@
           ; Funktionsaufruf für UpdateTable
           (update-sqldata db olddata newdata)
           ; Aktualisieren der JTable
-          (def lock true)
-          (def columndata (get-table-columns db selectedtable))
-          (def tabledata (get-table-data db selectedtable))
-          (def model (proxy [DefaultTableModel] [tabledata columndata]))
-          (.setModel table model)
-          (def lock false)
+          (refresh-table db)
           ; Frame ausblenden
           (.setVisible editframe false))))
     
@@ -309,7 +338,15 @@
       (reify ActionListener
         (actionPerformed
           [_ evt]
-          ; EVENT CANCEL
+          ; EVENT DELETE
+          (def delColCount (.getColumnCount edit-table))
+          (def delRowCount (.getRowCount edit-table))
+          (def deldata [])
+          (dotimes [n delColCount] (def deldata (conj deldata (.getValueAt edit-table 0 n))))
+          ; Funktionsaufruf zum Löschen
+          (delete-sqldata db deldata)
+          ; Aktualisieren der JTable
+          (refresh-table db)
           (.setVisible editframe false))))
     
     ; Zusammenbauen des Button frames
