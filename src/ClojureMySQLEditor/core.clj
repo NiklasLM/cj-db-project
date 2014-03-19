@@ -1,7 +1,21 @@
+; Clojure Database GUI
+;
+; Technische Hochschule Mittelhessen
+; Homepage: www.thm.de
+; Modul: Programmieren in Clojure
+;
+; Diese Anwendung verbindet sich mit einer MySQL Datenbank und stellt diese grafisch dar.
+; Zusätzlich können Operationen wie Bearbeiten, Hinzufügen, Löschen, Kommandozeile und Exportieren
+; der Datenbank vorgenommen werden.
+;
+; (C) by
+; Niklas Simonis
+; Dominik Eller
+
 (ns ClojureMySQLEditor.core
-  (:require [clojure.java.jdbc :as jdbc])
-  (:use clojure.java.jdbc)
-  (:use clojure.walk))
+ (:require [clojure.java.jdbc :as jdbc])
+ (:use clojure.java.jdbc)
+ (:use clojure.walk))
 
 ; Java-Bibliotheken importieren
 (import
