@@ -1,5 +1,7 @@
 (ns ClojureMySQLEditor.core
-  (:use clojure.java.jdbc))
+  (:require [clojure.java.jdbc :as jdbc])
+  (:use clojure.java.jdbc)
+  (:use clojure.walk))
 
 ; Java-Bibliotheken importieren
 (import
@@ -24,6 +26,8 @@
 (def table (JTable. ))
 ; JTableModel mit Daten
 (def model (proxy [DefaultTableModel]  [(to-array-2d data) (into-array columns)]))
+; Lock
+(def lock false)
 
 ; Datenbanktabellen
 (defn get-database-tables [db]
@@ -76,12 +80,43 @@
        (def i (inc i))))
    (reverse rowstack)))
 
+; Gibt den Primärschlüssel der ausgewählten Tabelle zurück
+(defn primary-keys
+  [db]
+  (with-connection db
+     (def primseq (result-set-seq (->
+                    (connection)
+                    (.getMetaData)
+                    (.getPrimaryKeys nil nil selectedtable)))))
+  (def primmap (first primseq))
+  (val (find primmap :column_name)))
+
 ; Funktion aktualisiert die Änderungen in der Datenbank
-; ToDo: SQL Statement
 (defn update-sqldata [db, olddata, newdata]
-  (println olddata)
-  (println newdata)
-  (println "Update goes here!"))
+  (if (.equals olddata newdata)
+    ;then
+    [
+     (println "Nothing to do!")
+     ]
+    ;else
+    [
+     ; Holen aller Spalten
+     (def tablecols (get-table-columns db selectedtable))
+     (def primarykey (primary-keys db))
+     
+     ; Mappen der Daten / Hinzufügen der Keys
+     (def oldmap (zipmap tablecols olddata))
+     (def oldmap (keywordize-keys oldmap))
+     (def updatemap (zipmap tablecols newdata))
+     (def updatemap (keywordize-keys updatemap))
+     
+     (def sqlkey (str primarykey " = ?"))
+     (def sqlval (val (find oldmap (keyword primarykey))))
+     
+     (with-connection db
+      (jdbc/update! db (keyword selectedtable) updatemap [sqlkey sqlval]))
+     ]
+    ))
 
 ; Funktion fügt einen Eintrag in die Datenbank hinzu
 ; ToDo: SQL Statement
@@ -249,6 +284,14 @@
           (dotimes [n colCount] (def newdata (conj newdata (.getValueAt edit-table 0 n))))
           ; Funktionsaufruf für UpdateTable
           (update-sqldata db olddata newdata)
+          ; Aktualisieren der JTable
+          (def lock true)
+          (def columndata (get-table-columns db selectedtable))
+          (def tabledata (get-table-data db selectedtable))
+          (def model (proxy [DefaultTableModel] [tabledata columndata]))
+          (.setModel table model)
+          (def lock false)
+          ; Frame ausblenden
           (.setVisible editframe false))))
     
     ; ActionListener für den Cancel Button
@@ -370,15 +413,19 @@
       (valueChanged
          [_ evt]
          ; Prüfen ob ausgewählte Tabelle wirklich gleich ist
-         (if (.getValueIsAdjusting selmod)
-           [
-            (if (.equals selectedtable (.getSelectedItem choose-combo))
-              [
-               (def selrow (.getSelectedRow table))
-               ; Aufruf zum Bearbeiten in neuem Fenster
-               (edit-entry db, selrow)
-              ])
-            ]))))
+         (if (false? lock)
+               [
+                (if (.getValueIsAdjusting selmod)
+                  [
+                   (if (.equals selectedtable (.getSelectedItem choose-combo))
+                     [
+                      (def selrow (.getSelectedRow table))
+                      ; Aufruf zum Bearbeiten in neuem Fenster
+                      (edit-entry db, selrow)
+                      ])
+                   ])
+                ]
+               ))))
     
     ; Zusammenbauen des Top Panels
     (doto top-panel
