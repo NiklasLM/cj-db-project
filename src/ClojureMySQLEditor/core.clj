@@ -17,6 +17,7 @@
  (:use clojure.java.jdbc)
  (:use clojure.walk)
  (:use clojure.java.io)
+ (:import main.java.DatabaseUtils)
 )
 
 ; Java-Bibliotheken importieren
@@ -253,11 +254,18 @@
           ]
          )
       
+       ; Connection Details laden
+       (def subprotocol (val (find db :subprotocol)))
+       (def subname (val (find db :subname)))
+       (def user (val (find db :user)))
+       (def password (val (find db :password)))
+       
        ; Daten holen
-
+       (def xyz (main.java.DatabaseUtils/getExport selectedtable (str subprotocol) (str subname) (str user) (str password)))
+       
        ; In Datei schreiben
        (with-open [wrtr (writer filename)]
-         (.write wrtr "Line to be written"))
+         (.write wrtr xyz))
        ]
       ;else
       [

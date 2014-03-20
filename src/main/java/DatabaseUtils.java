@@ -1,7 +1,8 @@
-package ClojureMySQLEditor;
+package main.java;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -11,9 +12,30 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class DatabaseUtils {
-
-	public String exportDatabaseTable(String tableName, Connection con){
+	
+	public static Connection getConnection(String subprotocol, String subname, String user, String password) {
+		Connection conn = null;
+		String conDetails = "jdbc:" + subprotocol + ":" + subname + "?user=" + user + "&password=" + password;
+		try {
+		    conn =
+		       DriverManager.getConnection(conDetails);
+		} catch(Exception e) {
+			
+		}
+		return conn;
+	}
+	
+	public static String getExport(String tableName, String subprotocol, String subname, String user, String password) {
+		Connection con = getConnection(subprotocol, subname, user, password	);
 		
+		String export = null;
+		export = exportDatabaseTable(tableName, con);
+		export += exportTableData(tableName, con);
+		
+		return export;
+	}
+
+	public static String exportDatabaseTable(String tableName, Connection con){
 		String sqlString = null;
 		Map<String, ArrayList<String>> primaryKeys = new HashMap<String, ArrayList<String>>();
 		
@@ -97,7 +119,7 @@ public class DatabaseUtils {
 		return sqlString;
 	}
 	
-	public String exportTableData(String tableName, Connection con){
+	public static String exportTableData(String tableName, Connection con){
 		
 		String sqlString = null;
 		
