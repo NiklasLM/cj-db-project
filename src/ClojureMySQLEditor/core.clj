@@ -14,11 +14,14 @@
 
 (ns ClojureMySQLEditor.core
  (:require [clojure.java.jdbc :as jdbc])
- (:use clojure.java.jdbc)
  (:use clojure.walk)
  (:use clojure.java.io)
  (:import main.java.DatabaseUtils)
 )
+
+; Einbinden des MVC Pattern
+(require '[ClojureMySQLEditor.model :as model])
+(require '[ClojureMySQLEditor.controller :as controller])
 
 ; Java-Bibliotheken importieren
 (import
@@ -48,262 +51,15 @@
 ; Lock
 (def lock false)
 
-
-; Warnungsfenster bei Fehler
-(defn error-frame
-  [err-reason]
-  (println (str "Error: " err-reason))
-  (let [
-        err-frame (JFrame. "Error Message")
-        
-        err-top-panel (JPanel.)
-        err-top-label (JLabel. "Reason:")
-        
-        err-center-panel (JPanel.)
-        err-center-label (JLabel. err-reason)
-        
-        err-footer-panel (JPanel.)
-        err-footer-button (JButton. "Close")
-       ]
-    ; Farbe setzen
-    (.setForeground err-top-label (. Color red))
-    
-    ;ActionListener für Close Button
-    (.addActionListener
-      err-footer-button
-      (reify ActionListener
-        (actionPerformed
-          [_ evt]
-          ; EVENT CMD
-          (.setVisible err-frame false))))
-    
-    (doto err-top-panel
-      (.add err-top-label))
-    
-    (doto err-center-panel
-      (.add err-center-label))
-    
-    (doto err-footer-panel
-      (.add err-footer-button))
-    
-    (doto err-frame
-      (.add err-top-panel BorderLayout/PAGE_START)
-      (.add err-center-panel BorderLayout/CENTER)
-      (.add err-footer-panel BorderLayout/PAGE_END)
-      (.setSize 200 150)
-      (.setVisible true))))
-
-; Datenbanktabellen
-(defn get-database-tables [db]
-    (with-connection db
-        (into #{}
-            (map #(str (% :table_name))
-                (result-set-seq (->
-                    (connection)
-                    (.getMetaData)
-                    (.getColumns nil nil nil "%")))))))
-
-; Datenbanktabellen Spalten
-(defn get-table-columns [db, table]
-  (with-connection db
-    (def rowstack (into #{}
-        (map #(str (% :column_name))
-             (resultset-seq (->
-                   (connection)
-                   (.getMetaData)
-                   (.getColumns nil nil table nil)))))))
-  (into-array (reverse rowstack)))
-
-; Datenbanktabellen Daten
-(defn get-table-data [db, table]
-  (def cols (clojure.string/join (interpose ", " (get-table-columns db table))))
-  (with-connection db
-   (with-query-results rs [(str "select " cols " from " table)]
-     (def rsstack [])
-     (doseq [row rs]
-       (def rowstack [])
-       (doseq [value row]
-         (def rowstack (conj rowstack (str (val value)))))
-       (def rsstack (conj rsstack (reverse rowstack))))
-     (to-array-2d rsstack))))
-
-
-; Gibt die Daten einer selektierten Zeile zurück
-(defn get-table-row-data [db, table, column]
-  (def cols (clojure.string/join (interpose ", " (get-table-columns db table))))
-  (with-connection db
-   (with-query-results rs [(str "select " cols " from " table)]
-     (def i 0)
-     (doseq [row rs]
-       (if (= i column)
-         [
-         (def rowstack [])
-         (doseq [value row]
-           (def rowstack (conj rowstack (str (val value)))))
-         ])
-       (def i (inc i))))
-   (reverse rowstack)))
-
-; Gibt den Primärschlüssel der ausgewählten Tabelle zurück
-(defn primary-keys
-  [db]
-  (with-connection db
-     (def primseq (result-set-seq (->
-                    (connection)
-                    (.getMetaData)
-                    (.getPrimaryKeys nil nil selectedtable)))))
-  (def primmap (first primseq))
-  (val (find primmap :column_name)))
-
-; Funktion aktualisiert die Änderungen in der Datenbank
-(defn update-sqldata [db, olddata, newdata]
-  (if (.equals olddata newdata)
-    ;then
-    [
-     (println "Nothing to do!")
-     ]
-    ;else
-    [
-     ; Holen aller Spalten
-     (def tablecols (get-table-columns db selectedtable))
-     (def primarykey (primary-keys db))
-     
-     ; Mappen der Daten / Hinzufügen der Keys
-     (def oldmap (zipmap tablecols olddata))
-     (def oldmap (keywordize-keys oldmap))
-     (def updatemap (zipmap tablecols newdata))
-     (def updatemap (keywordize-keys updatemap))
-     
-     (def sqlkey (str primarykey " = ?"))
-     (def sqlval (val (find oldmap (keyword primarykey))))
-     
-     (try
-     (with-connection db
-      (jdbc/update! db (keyword selectedtable) updatemap [sqlkey sqlval]))
-     (catch Exception e
-             (def reason "update failed!")
-             (error-frame reason)))
-     ]
-    ))
-
-; Funktion fügt einen Eintrag in die Datenbank hinzu
-(defn insert-sqldata 
-  [db, newdata]
-  ; Holen aller Spalten
-  (def newtablecols (get-table-columns db selectedtable))
-  (def newmap (zipmap newtablecols newdata))
-  (def newmap (keywordize-keys newmap))
-  
-  (try
-  (with-connection db
-      (jdbc/insert! db (keyword selectedtable) newmap))
-  (catch Exception e
-             (def reason "insert failed!")
-             (error-frame reason))))
-
-; Funktion zum löschen eines Eintrags
-(defn delete-sqldata
-  [db, data]
-  
-  (def deltablecols (get-table-columns db selectedtable))
-  (def delprimarykey (primary-keys db))
-  
-  (def delmap (zipmap deltablecols data))
-  (def delmap (keywordize-keys delmap))
-  
-  (def delsqlkey (str delprimarykey " = ?"))
-  (def delsqlval (val (find delmap (keyword delprimarykey))))
-  
-  (try
-    (with-connection db
-      (jdbc/delete! db (keyword selectedtable) [delsqlkey delsqlval]))
-  (catch Exception e
-             (def reason "delete failed!")
-             (error-frame reason))))
-
 ; Aktualisieren der JTable
 (defn refresh-table
-  [db]
+  [db, seltable]
   (def lock true)
-          (def columndata (get-table-columns db selectedtable))
-          (def tabledata (get-table-data db selectedtable))
+          (def columndata (model/get-table-columns db seltable))
+          (def tabledata (model/get-table-data db seltable))
           (def model (proxy [DefaultTableModel] [tabledata columndata]))
           (.setModel table model)
           (def lock false))
-
-; Export die ausgewählte Tabelle in eine Datei
-(defn export-db 
-  [db]
-  (let [
-        extFilter (FileNameExtensionFilter. "SQL (.sql)" (into-array  ["sql"]))
-        filechooser (JFileChooser. (System/getProperty "user.home"))
-        dummy (.setFileFilter filechooser extFilter)
-        retval (.showSaveDialog filechooser nil)
-       ]
-    
-    (if (= retval JFileChooser/APPROVE_OPTION)
-      ;then
-      [
-       (def filename (.getSelectedFile filechooser))
-       (if (.endsWith (str filename) ".sql")
-         [
-          ;Nothing yet
-          ]
-         [
-          (def filename (str filename ".sql"))
-          ]
-         )
-      
-       ; Connection Details laden
-       (def subprotocol (val (find db :subprotocol)))
-       (def subname (val (find db :subname)))
-       (def user (val (find db :user)))
-       (def password (val (find db :password)))
-       
-       ; Daten holen
-       (def xyz (main.java.DatabaseUtils/getExport selectedtable (str subprotocol) (str subname) (str user) (str password)))
-       
-       ; In Datei schreiben
-       (with-open [wrtr (writer filename)]
-         (.write wrtr xyz))
-       ]
-      ;else
-      [
-       ]
-      )))
-
-
-; Import Database
-; Bisher nicht vorhanden.
-(defn import-db
-  [ ]
-  )
-
-; Funktion die das SQL Statement ausführt
-(defn execute-sql-command
-  [db, command]
-  (if (.equals "" command)
-    ;then
-    [
-     (println "Nothing to do!")
-     ]
-    ;else
-    [   
-     (try
-       (with-connection db
-         (jdbc/query db [command]))
-       (println "Execute successful")
-       (catch MySQLSyntaxErrorException e
-         (def reason "Execute failed. You have an error in your SQL syntax; check the manual!")
-         (error-frame reason))
-       (catch SQLException e
-         (def reason "Execute failed. SQL Error!")
-         (error-frame reason))
-       (catch Exception e
-         (def reason "execute failed!")
-         (println e)
-         (error-frame reason)))
-     ]))
 
 ; SQL Command Fenster, führt einen SQL Befehl auf der Datenbank aus.
 (defn cmd-frame 
@@ -328,7 +84,7 @@
           [_ evt]
           ; Execute
           (def commandtext (.getText cmd-text))
-          (execute-sql-command db commandtext)
+          (model/execute-sql-command db commandtext)
           (.setVisible cmdframe false))))
     
     ; ActionListenere für den Cancel Button
@@ -359,7 +115,7 @@
 ; New Entry GUI
 (defn new-frame
   [db]
-  (def newcols (get-table-columns db selectedtable))
+  (def newcols (model/get-table-columns db selectedtable))
   (def sizecols (count newcols))
   (def newdata (to-array-2d [["","","","","",""]]))
 
@@ -389,9 +145,9 @@
           (def newtable-data [])
           (dotimes [n newtable-colCount] (def newtable-data (conj newtable-data (.getValueAt newtable 0 n))))
           ; Funktionsaufruf für InsertTable
-          (insert-sqldata db newtable-data)
+          (model/insert-sqldata db newtable-data selectedtable)
           ; Aktualisieren der JTable
-          (refresh-table db)
+          (refresh-table db selectedtable)
           ; Ausblenden des Frames
           (.setVisible newframe false))))
     
@@ -422,7 +178,7 @@
 (defn edit-entry
   [db, selrow]
   
-  (def rowdata (get-table-row-data db selectedtable selrow))
+  (def rowdata (model/get-table-row-data db selectedtable selrow))
   (def olddata rowdata)
   (def editdata (to-array-2d [rowdata]))
   
@@ -431,7 +187,7 @@
         
         edit-toppanel (JLabel. "Edit entry:")
         
-        edit-table (JTable. editdata  (get-table-columns db selectedtable))
+        edit-table (JTable. editdata  (model/get-table-columns db selectedtable))
         edit-pane (JScrollPane. edit-table)
         
         edit-buttonframe (JPanel.)
@@ -453,9 +209,9 @@
           (def newdata [])
           (dotimes [n colCount] (def newdata (conj newdata (.getValueAt edit-table 0 n))))
           ; Funktionsaufruf für UpdateTable
-          (update-sqldata db olddata newdata)
+          (model/update-sqldata db olddata newdata selectedtable)
           ; Aktualisieren der JTable
-          (refresh-table db)
+          (refresh-table db selectedtable)
           ; Frame ausblenden
           (.setVisible editframe false))))
     
@@ -480,9 +236,9 @@
           (def deldata [])
           (dotimes [n delColCount] (def deldata (conj deldata (.getValueAt edit-table 0 n))))
           ; Funktionsaufruf zum Löschen
-          (delete-sqldata db deldata)
+          (model/delete-sqldata db deldata selectedtable)
           ; Aktualisieren der JTable
-          (refresh-table db)
+          (refresh-table db selectedtable)
           (.setVisible editframe false))))
     
     ; Zusammenbauen des Button frames
@@ -504,7 +260,7 @@
 (defn editor-frame 
   [db]
   ; Tabellennamen
-  (def tablenames (get-database-tables db))
+  (def tablenames (model/get-database-tables db))
 
   (let [
         frame (JFrame. "Database Table Editor")
@@ -540,8 +296,8 @@
       (reify ActionListener
         (actionPerformed
           [_ evt]
-          (def columndata (get-table-columns db (.getSelectedItem choose-combo)))
-          (def tabledata (get-table-data db (.getSelectedItem choose-combo)))
+          (def columndata (model/get-table-columns db (.getSelectedItem choose-combo)))
+          (def tabledata (model/get-table-data db (.getSelectedItem choose-combo)))
           (def model (proxy [DefaultTableModel] [tabledata columndata]))
           (.setModel table model)
           (def selectedtable (.getSelectedItem choose-combo)))))
@@ -569,7 +325,7 @@
         (actionPerformed
           [_ evt]
           ; EVENT EXPORT
-          (export-db db)
+          (controller/export-db db selectedtable)
           )))
     
     ; ActionListener für Export Button
@@ -579,7 +335,7 @@
         (actionPerformed
           [_ evt]
           ; EVENT IMPORT
-          (import-db)
+          (controller/import-db)
           )))
     
     ;ActionListener für Command Button, öffnet neues Frame
@@ -681,7 +437,7 @@
          
          ; Aufbauen der Verbindung mit Exceptionhandling
          (try
-           (get-connection db)
+           (jdbc/get-connection db)
            (.setForeground tmp-label (. Color green))
            (.setText tmp-label "Connected!")
            (println "Verbindung erfolgreich hergestellt!")
@@ -738,6 +494,3 @@
 
 ; Starten der Anwendung
 (databaseconnect)
-
-; ToDo:
-; - Export-/Importfunktion für die ganze Datenbank aus/in ein SQL File.
