@@ -24,7 +24,9 @@
 ; Java-Bibliotheken importieren
 (import
   '(java.sql SQLException)
-  '(com.mysql.jdbc.exceptions.jdbc4 MySQLSyntaxErrorException))
+  '(com.mysql.jdbc.exceptions.jdbc4 MySQLSyntaxErrorException)
+  '(com.mysql.jdbc MysqlDataTruncation)
+  )
 
 ; Gibt alle Datenbanktabellen zurück
 (defn get-database-tables 
@@ -116,10 +118,15 @@
      (try
      (jdbc/with-connection db
       (jdbc/update! db (keyword table) updatemap [sqlkey sqlval]))
+     (catch MysqlDataTruncation e
+       (def reason (str "update failed! " (.getMessage e)))
+       (view/error-frame reason))
+     (catch SQLException e
+       (def reason (str "update failed! " (.getMessage e)))
+       (view/error-frame reason))
      (catch Exception e
-             (def reason "update failed!")
-             (view/error-frame reason)
-             ))
+       (def reason "update failed!")
+       (view/error-frame reason)))
      ]))
 
 ; Funktion fügt einen Eintrag in die Datenbank hinzu
@@ -133,10 +140,16 @@
   (try
   (jdbc/with-connection db
       (jdbc/insert! db (keyword table) newmap))
+  (catch MysqlDataTruncation e
+    (def reason (str "insert failed! " (.getMessage e)))
+    (view/error-frame reason))
+  (catch SQLException e
+    (def reason (str "insert failed! " (.getMessage e)))
+    (view/error-frame reason))
   (catch Exception e
-             (def reason "insert failed!")
-             (view/error-frame reason)
-             )))
+    (def reason "insert failed!")
+    (view/error-frame reason)
+    )))
 
 ; Funktion zum löschen eines Eintrags
 (defn delete-sqldata

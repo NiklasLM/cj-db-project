@@ -33,7 +33,6 @@
   '(javax.swing.border EmptyBorder)
   '(java.util Vector)
   '(java.awt GridLayout Color GridBagLayout BorderLayout ComponentOrientation Dimension)
-  '(java.sql SQLException)
   '(com.mysql.jdbc.exceptions.jdbc4 MySQLSyntaxErrorException)
   )
 
