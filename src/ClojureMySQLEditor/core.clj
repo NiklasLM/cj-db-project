@@ -447,7 +447,7 @@
            ; Bei Fehler
            (catch Exception e
              (println "Verbindung fehlgeschlagen!")
-             (def reason "Connection could not be established. Check your login information.")
+             (def reason "<HTML><BODY>Connection could not be established.<BR>Check your login information.</BODY></HTML>")
              (view/error-frame reason)
              (.setForeground tmp-label (. Color red))
              (.setText tmp-label "Disconnected!"))))))

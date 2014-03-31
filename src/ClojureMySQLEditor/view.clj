@@ -67,6 +67,5 @@
       (.add err-top-panel BorderLayout/PAGE_START)
       (.add err-center-panel BorderLayout/CENTER)
       (.add err-footer-panel BorderLayout/PAGE_END)
-      (.pack)
-      (.setSize 200 150)
+      (.setSize 350 175)
       (.setVisible true))))

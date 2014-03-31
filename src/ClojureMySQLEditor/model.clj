@@ -119,13 +119,13 @@
      (jdbc/with-connection db
       (jdbc/update! db (keyword table) updatemap [sqlkey sqlval]))
      (catch MysqlDataTruncation e
-       (def reason (str "update failed! " (.getMessage e)))
+       (def reason (str "<HTML><BODY>Update failed!<BR>"(str (.getMessage e) "</BODY></HTML>")))
        (view/error-frame reason))
      (catch SQLException e
-       (def reason (str "update failed! " (.getMessage e)))
+       (def reason (str "<HTML><BODY>Update failed!<BR>"(str (.getMessage e) "</BODY></HTML>")))
        (view/error-frame reason))
      (catch Exception e
-       (def reason "update failed!")
+       (def reason "Update failed!")
        (view/error-frame reason)))
      ]))
 
@@ -141,13 +141,13 @@
   (jdbc/with-connection db
       (jdbc/insert! db (keyword table) newmap))
   (catch MysqlDataTruncation e
-    (def reason (str "insert failed! " (.getMessage e)))
+    (def reason (str "<HTML><BODY>Insert failed!<BR>"(str (.getMessage e) "</BODY></HTML>")))
     (view/error-frame reason))
   (catch SQLException e
-    (def reason (str "insert failed! " (.getMessage e)))
+    (def reason (str "<HTML><BODY>Insert failed!<BR>"(str (.getMessage e) "</BODY></HTML>")))
     (view/error-frame reason))
   (catch Exception e
-    (def reason "insert failed!")
+    (def reason "Insert failed!")
     (view/error-frame reason)
     )))
 
@@ -168,9 +168,8 @@
     (jdbc/with-connection db
       (jdbc/delete! db (keyword table) [delsqlkey delsqlval]))
   (catch Exception e
-             (def reason "delete failed!")
-             (view/error-frame reason)
-             )))
+    (def reason "Delete failed!")
+    (view/error-frame reason))))
 
 ; Funktion die das SQL Statement ausführt
 (defn execute-sql-command
@@ -187,16 +186,13 @@
          (jdbc/query db [command]))
        (println "Execute successful")
        (catch MySQLSyntaxErrorException e
-         (def reason "Execute failed. You have an error in your SQL syntax; check the manual!")
-         (view/error-frame reason)
-         )
+         (def reason "<HTML><BODY>Execute failed.<BR>You have an error in your SQL syntax; check the manual!</BODY></HTML>")
+         (view/error-frame reason))
        (catch SQLException e
-         (def reason "Execute failed. SQL Error!")
-         (view/error-frame reason)
-         )
+         (def reason "Execute failed. SQL-Error!")
+         (view/error-frame reason))
        (catch Exception e
-         (def reason "execute failed!")
+         (def reason "Execute failed!")
          (println e)
-         (view/error-frame reason)
-         ))
+         (view/error-frame reason)))
      ]))
