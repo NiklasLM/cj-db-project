@@ -22,6 +22,7 @@
 ; Einbinden des MVC Pattern
 (require '[ClojureMySQLEditor.model :as model])
 (require '[ClojureMySQLEditor.controller :as controller])
+(require '[ClojureMySQLEditor.view :as view])
 
 ; Java-Bibliotheken importieren
 (import
@@ -426,6 +427,7 @@
                db-port (.getText port-text)
                db-name (str (.getText database-text))
               ]
+           
            ; Definieren der Datenbankverbindung
            ; ToDo: Treiber anpassen, Fenster für Protokoll noch deaktiviert
            (def db {:classname "com.mysql.jdbc.Driver"
@@ -445,6 +447,8 @@
            ; Bei Fehler
            (catch Exception e
              (println "Verbindung fehlgeschlagen!")
+             (def reason "Connection could not be established. Check your login information.")
+             (view/error-frame reason)
              (.setForeground tmp-label (. Color red))
              (.setText tmp-label "Disconnected!"))))))
     
