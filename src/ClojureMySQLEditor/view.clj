@@ -1,20 +1,24 @@
-; Clojure Database GUI
+; ClojureMySQL Editor
 ;
 ; Technische Hochschule Mittelhessen
-; Homepage: www.thm.de
+; Homepage: http://www.mni.thm.de
 ; Modul: Programmieren in Clojure
 ;
-; Diese Anwendung verbindet sich mit einer MySQL-Datenbank und stellt den Inhalt dar.
-; Zusätzlich können Funktionen wie Bearbeiten, Hinzufügen, Löschen, Kommandozeile und Exportieren
-; der Datenbank ausgeführt werden.
+; Dieses Programm verbindet sich mit einer MySQL-Datenbank und stellt den Inhalt grafisch dar.
+; Zusätzlich kann der Anwender Funktionen wie Bearbeiten, Hinzufügen, Löschen, Kommandozeile und Exportieren
+; auf der Datenbank ausgeführt werden.
 ;
-; (C) by
-; Niklas Simonis
-; Dominik Eller
+; @version     1.0.0
+; @package     ClojureMySQLEditor
+; @name        ClojureMySQLEditor.view
+; @author      Niklas Simonis
+; @author      Dominik Eller
+; @description Diese Datei enthält Funktionen die Daten von der Datenbank holen und schreiben.
+; @link        https://github.com/NiklasLM/clj-db-project
 
 (ns ClojureMySQLEditor.view)
 
-; Java-Bibliotheken importieren
+; Java-Klassen importieren
 (import
   '(javax.swing ListSelectionModel JFileChooser DefaultCellEditor JFrame JLabel JTextField JButton JComboBox JTable JPanel JScrollPane JPasswordField JTextArea)
   '(javax.swing.table DefaultTableModel TableCellRenderer)
@@ -26,7 +30,10 @@
   '(java.awt GridLayout Color GridBagLayout BorderLayout ComponentOrientation Dimension)
   )
 
-; Warnungsfenster bei Fehler
+; @name error-frame
+; @description Erzeugt ein Fehlerfenster
+; @param - err-reason - Enthält den Fehlergrund
+; @return void
 (defn error-frame
   [err-reason]
   (println (str "Error: " err-reason))

@@ -1,16 +1,20 @@
-; Clojure Database GUI
+; ClojureMySQL Editor
 ;
 ; Technische Hochschule Mittelhessen
-; Homepage: www.thm.de
+; Homepage: http://www.mni.thm.de
 ; Modul: Programmieren in Clojure
 ;
-; Diese Anwendung verbindet sich mit einer MySQL-Datenbank und stellt den Inhalt dar.
-; Zusätzlich können Funktionen wie Bearbeiten, Hinzufügen, Löschen, Kommandozeile und Exportieren
-; der Datenbank ausgeführt werden.
+; Dieses Programm verbindet sich mit einer MySQL-Datenbank und stellt den Inhalt grafisch dar.
+; Zusätzlich kann der Anwender Funktionen wie Bearbeiten, Hinzufügen, Löschen, Kommandozeile und Exportieren
+; auf der Datenbank ausgeführt werden.
 ;
-; (C) by
-; Niklas Simonis
-; Dominik Eller
+; @version     1.0.0
+; @package     ClojureMySQLEditor
+; @name        ClojureMySQLEditor.controller
+; @author      Niklas Simonis
+; @author      Dominik Eller
+; @description Diese Datei enthält Funktionen die vom Core verwendet werden.
+; @link        https://github.com/NiklasLM/clj-db-project
 
 (ns ClojureMySQLEditor.controller
   (:require [clojure.java.jdbc :as jdbc])
@@ -33,7 +37,11 @@
   '(com.mysql.jdbc.exceptions.jdbc4 MySQLSyntaxErrorException)
   )
 
-; Export die ausgewählte Tabelle in eine Datei
+; @name export-db
+; @description Exportiert eine ausgewählte Tabelle und speichert diese lokal ab.
+; @param - db - Datenbankverbindung
+; @param - table - String - Die ausgewählte Tabelle
+; @return void
 (defn export-db 
   [db, table]
   (let [
@@ -73,10 +81,3 @@
       [
        ]
       )))
-
-
-; Import Database
-; Bisher nicht vorhanden.
-(defn import-db
-  [ ]
-  )

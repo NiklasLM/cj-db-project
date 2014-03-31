@@ -1,15 +1,20 @@
-; Clojure Database GUI
+; ClojureMySQL Editor
 ;
 ; Technische Hochschule Mittelhessen
-; Homepage: www.thm.de
+; Homepage: http://www.mni.thm.de
 ; Modul: Programmieren in Clojure
 ;
-; Diese Datei beinhaltet alle Funktionen für die Anbindung
-; an die Datenbank.
+; Dieses Programm verbindet sich mit einer MySQL-Datenbank und stellt den Inhalt grafisch dar.
+; Zusätzlich kann der Anwender Funktionen wie Bearbeiten, Hinzufügen, Löschen, Kommandozeile und Exportieren
+; auf der Datenbank ausgeführt werden.
 ;
-; (C) by
-; Niklas Simonis
-; Dominik Eller
+; @version     1.0.0
+; @package     ClojureMySQLEditor
+; @name        ClojureMySQLEditor.model
+; @author      Niklas Simonis
+; @author      Dominik Eller
+; @description Diese Datei enthält Funktionen die Daten von der Datenbank holen und schreiben.
+; @link        https://github.com/NiklasLM/clj-db-project
 
 (ns ClojureMySQLEditor.model
   (:require [clojure.java.jdbc :as jdbc])
@@ -21,14 +26,17 @@
 ; Einbinden des Cores
 (require '[ClojureMySQLEditor.view :as view])
 
-; Java-Bibliotheken importieren
+; Java-Klassen importieren
 (import
   '(java.sql SQLException)
   '(com.mysql.jdbc.exceptions.jdbc4 MySQLSyntaxErrorException)
   '(com.mysql.jdbc MysqlDataTruncation)
   )
 
-; Gibt alle Datenbanktabellen zurück
+; @name get-database-tables
+; @description Gibt alle Tabellen einer Datenbank zurück
+; @param - db - Datenbankverbindung
+; @return - Array - Alle Tabellen
 (defn get-database-tables 
   [db]
     (jdbc/with-connection db
@@ -39,7 +47,11 @@
                     (.getMetaData)
                     (.getColumns nil nil nil "%")))))))
 
-; Gibt alle Datenbankspalten zurück
+; @name get-table-columns
+; @description Gibt alle Spalten einer Tabelle zurück
+; @param - db - Datenbankverbindung
+; @param - table - Ausgewählte Tabelle
+; @return - Array - Alle Spalten einer Tabelle
 (defn get-table-columns 
   [db, table]
   (jdbc/with-connection db
@@ -51,7 +63,11 @@
                    (.getColumns nil nil table nil)))))))
   (into-array (reverse rowstack)))
 
-; Gibt alle Daten einer Tabelle zurück
+; @name get-table-data
+; @description Gibt alle Daten einer Tabelle zurück
+; @param - db - Datenbankverbindung
+; @param - table - Ausgewählte Tabelle
+; @return - Array - Inhalt einer Tabelle
 (defn get-table-data 
   [db, table]
   (def cols (clojure.string/join (interpose ", " (get-table-columns db table))))
@@ -65,8 +81,14 @@
        (def rsstack (conj rsstack (reverse rowstack))))
      (to-array-2d rsstack))))
 
-; Gibt die Daten einer ausgewählten Zeile zurück
-(defn get-table-row-data [db, table, column]
+; @name get-table-row-data
+; @description  Gibt die Daten einer ausgewählten Zeile zurück
+; @param - db - Datenbankverbindung
+; @param - table - Ausgewählte Tabelle
+; @param - column - Ausgewählte Spalte
+; @return - Array - Inhalt einer Zeile einer Tabelle
+(defn get-table-row-data 
+  [db, table, column]
   (def cols (clojure.string/join (interpose ", " (get-table-columns db table))))
   (jdbc/with-connection db
    (jdbc/with-query-results rs [(str "select " cols " from " table)]
@@ -81,7 +103,11 @@
        (def i (inc i))))
    (reverse rowstack)))
 
-; Gibt den Primärschlüssel der ausgewählten Tabelle zurück
+; @name primary-keys
+; @description Gibt den Primärschlüssel der ausgewählten Tabelle zurück
+; @param - db - Datenbankverbindung
+; @param - table - Ausgewählte Tabelle
+; @return - Array - Enthält PrimaryKey einer Tabelle
 (defn primary-keys
   [db, table]
   (jdbc/with-connection db
@@ -92,7 +118,13 @@
   (def primmap (first primseq))
   (val (find primmap :column_name)))
 
-; Funktion aktualisiert die Änderungen in der Datenbank
+; @name update-sqldata
+; @description Funktion aktualisiert die Änderungen in der Datenbank, bei Fehler wird ein Error-Frame erzeugt.
+; @param - db - Datenbankverbindung
+; @param - olddata - Alten Daten eines Eintrags
+; @param - newdata - Neue Datein eines Eintrags
+; @param - table - Ausgewählte Tabelle
+; @return void
 (defn update-sqldata 
   [db, olddata, newdata, table]
   (if (.equals olddata newdata)
@@ -129,7 +161,12 @@
        (view/error-frame reason)))
      ]))
 
-; Funktion fügt einen Eintrag in die Datenbank hinzu
+; @name insert-sqldata
+; @description Funktion fügt einen Eintrag in die Datenbank hinzu, bei Fehler wird ein Error-Frame erzeugt.
+; @param - db - Datenbankverbindung
+; @param - newdata - Neue Datein eines Eintrags
+; @param - table - Ausgewählte Tabelle
+; @return void
 (defn insert-sqldata 
   [db, newdata, table]
   ; Holen aller Spalten
@@ -151,7 +188,12 @@
     (view/error-frame reason)
     )))
 
-; Funktion zum löschen eines Eintrags
+; @name delete-sqldata
+; @description Funktion zum löschen eines Eintrags, bei Fehler wird ein Error-Frame erzeugt.
+; @param - db - Datenbankverbindung
+; @param - data - Enthält die Daten des Eintrags
+; @param - table - Ausgewählte Tabelle
+; @return void
 (defn delete-sqldata
   [db, data, table]
   
@@ -171,7 +213,11 @@
     (def reason "Delete failed!")
     (view/error-frame reason))))
 
-; Funktion die das SQL Statement ausführt
+; @name execute-sql-command
+; @description Funktion die das SQL Statement ausführt, bei Fehler wird ein Error-Frame erzeugt.
+; @param - db - Datenbankverbindung
+; @param - command - Enthält das auszuführende Kommando
+; @return void
 (defn execute-sql-command
   [db, command]
   (if (.equals "" command)

@@ -6,14 +6,15 @@
 ;
 ; Dieses Programm verbindet sich mit einer MySQL-Datenbank und stellt den Inhalt grafisch dar.
 ; Zusätzlich kann der Anwender Funktionen wie Bearbeiten, Hinzufügen, Löschen, Kommandozeile und Exportieren
-;  auf der Datenbank ausgeführt werden.
+; auf der Datenbank ausgeführt werden.
 ;
-; @version 1.0.0
-; @package ClojureMySQLEditor
-; @name    ClojureMySQLEditor.core
-; @author  Niklas Simonis
-; @author  Dominik Eller
-; @link    https://github.com/NiklasLM/clj-db-project
+; @version     1.0.0
+; @package     ClojureMySQLEditor
+; @name        ClojureMySQLEditor.core
+; @author      Niklas Simonis
+; @author      Dominik Eller
+; @description Diese Datei startet die Anwendung und enthält die Grundlegenden Frames.
+; @link        https://github.com/NiklasLM/clj-db-project
 
 
 (ns ClojureMySQLEditor.core
@@ -352,14 +353,14 @@
           (controller/export-db db selectedtable)
           )))
     
-    ; ActionListener für Export Button
+    ; ActionListener für Import Button
     (.addActionListener
       import-button
       (reify ActionListener
         (actionPerformed
           [_ evt]
           ; EVENT IMPORT
-          (controller/import-db)
+          ;(controller/import-db)
           )))
     
     ;ActionListener für Command Button, öffnet neues Frame
