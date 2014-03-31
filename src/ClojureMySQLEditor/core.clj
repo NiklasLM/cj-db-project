@@ -1,16 +1,20 @@
-; Clojure Database GUI
+; ClojureMySQL Editor
 ;
 ; Technische Hochschule Mittelhessen
-; Homepage: www.thm.de
+; Homepage: http://www.mni.thm.de
 ; Modul: Programmieren in Clojure
 ;
-; Diese Anwendung verbindet sich mit einer MySQL-Datenbank und stellt den Inhalt dar.
-; Zusätzlich können Funktionen wie Bearbeiten, Hinzufügen, Löschen, Kommandozeile und Exportieren
-; der Datenbank ausgeführt werden.
+; Dieses Programm verbindet sich mit einer MySQL-Datenbank und stellt den Inhalt grafisch dar.
+; Zusätzlich kann der Anwender Funktionen wie Bearbeiten, Hinzufügen, Löschen, Kommandozeile und Exportieren
+;  auf der Datenbank ausgeführt werden.
 ;
-; (C) by
-; Niklas Simonis
-; Dominik Eller
+; @version 1.0.0
+; @package ClojureMySQLEditor
+; @name    ClojureMySQLEditor.core
+; @author  Niklas Simonis
+; @author  Dominik Eller
+; @link    https://github.com/NiklasLM/clj-db-project
+
 
 (ns ClojureMySQLEditor.core
  (:require [clojure.java.jdbc :as jdbc])
@@ -19,12 +23,12 @@
  (:import main.java.DatabaseUtils)
 )
 
-; Einbinden des MVC Pattern
+; Einbinden der MVC Dateien
 (require '[ClojureMySQLEditor.model :as model])
 (require '[ClojureMySQLEditor.controller :as controller])
 (require '[ClojureMySQLEditor.view :as view])
 
-; Java-Bibliotheken importieren
+; Java-Klassen importieren
 (import
   '(javax.swing ListSelectionModel JFileChooser DefaultCellEditor JFrame JLabel JTextField JButton JComboBox JTable JPanel JScrollPane JPasswordField JTextArea)
   '(javax.swing.table DefaultTableModel TableCellRenderer)
@@ -37,21 +41,31 @@
   '(com.mysql.jdbc.exceptions.jdbc4 MySQLSyntaxErrorException)
   )
 
-; Globale Variablen
-; Spalten
+; Definieren aller Globale Variablen
+
+; Spalten der Tabelle
 (def columns ["table"])
+
 ; Daten für Tabellenfenster
 (def data [["please select a table in dropdown"]])
+
 ; Aktuell ausgewählte Tabelle
 (def selectedtable "")
+
 ; JTable für den Inhalt der Tabelle
 (def table (JTable. ))
+
 ; JTableModel mit Daten
 (def model (proxy [DefaultTableModel]  [(to-array-2d data) (into-array columns)]))
+
 ; Lock
 (def lock false)
 
-; Aktualisieren der JTable
+; @name refresh-table
+; @description Aktualisiert die Tabelle im Hauptfenster
+; @param - db - Datenbankverbindung
+; @param - seltable - String - Die ausgewählte Tabelle
+; @return void
 (defn refresh-table
   [db, seltable]
   (def lock true)
@@ -61,7 +75,10 @@
           (.setModel table model)
           (def lock false))
 
-; SQL Command Fenster, führt einen SQL Befehl auf der Datenbank aus.
+; @name cmd-frame
+; @description SQL-Command Fenster, führt einen SQL Befehl auf der Datenbank aus.
+; @param - db - Datenbankverbindung
+; @return void
 (defn cmd-frame 
   [db]
   (let [
@@ -112,7 +129,10 @@
      (.setSize 500 400)
      (.setVisible true))))
 
-; New Entry GUI
+; @name new-frame
+; @description Erzeugt ein Fenster um neue Einträge hinzuzufügen
+; @param - db - Datenbankverbindung
+; @return void
 (defn new-frame
   [db]
   (def newcols (model/get-table-columns db selectedtable))
@@ -173,8 +193,11 @@
       (.setSize 600 130)
       (.setVisible true))))
 
-; Edit Fenster
-; Zeigt den Inhalt einer Zeile
+; @name edit-entry
+; @description Erzeugt ein Fenster zum Bearbeiten von Einträgen und zeigt den Inhalt einer Zeile.
+; @param - db - Datenbankverbindung
+; @param - selrow - Enthält die ausgewählte Zeile
+; @return void
 (defn edit-entry
   [db, selrow]
   
@@ -255,8 +278,10 @@
       (.setSize 600 130)
       (.setVisible true))))
 
-; Editor GUI
-; Zeigt den Inhalt einer Tabelle an
+; @name editor-frame
+; @description Erzeugt das Hauptfenster und zeigt den Inhalt einer Tablle
+; @param - db - Datenbankverbindung
+; @return void
 (defn editor-frame 
   [db]
   ; Tabellennamen
@@ -286,7 +311,6 @@
       (.setSelectionMode ListSelectionModel/SINGLE_SELECTION))
     (-> table .getTableHeader (.setReorderingAllowed false))
     
-    ; ToDo: Funktion bisher nicht unterstüzt.
     ;(.setEnabled export-button false)
     ;(.setEnabled import-button false)
     
@@ -390,7 +414,9 @@
       (.pack)
       (.setVisible true))))
 
-; Zeigt das Connection Frame, wird direkt beim Starten des Programms ausgeführt.
+; @name databaseconnect
+; @description Erzeugt das Login-Fenster und erzeugt die Verbindung zur Datenbank.
+; @return void
 (defn databaseconnect 
   []
   (let [
